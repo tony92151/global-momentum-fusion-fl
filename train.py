@@ -100,7 +100,7 @@ if __name__ == '__main__':
         test_acc = []
         test_loss = []
         for tr in trainers:
-            a, l = ev.eval_run(model=copy.deepcopy(net), round_=epoch)
+            a, l = ev.eval_run(model=copy.deepcopy(tr.last_model), round_=epoch)
             test_acc.append(a)
             test_loss.append(l)
 

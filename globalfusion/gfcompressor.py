@@ -16,7 +16,7 @@ def normalize(value, device=torch.device("cpu")):
 
 class GFCCompressor:
     def __init__(self, compress_ratio=0.5, fusing_ratio=0.8, device=torch.device("cpu")):
-        super().__init__(average=True, tensors_size_are_same=False)
+        #super().__init__(average=True, tensors_size_are_same=False)
         self.compress_ratio = compress_ratio
         self.fusing_ratio = fusing_ratio
         self.param_groups_c = None
@@ -74,7 +74,7 @@ class GFCCompressor:
                             continue
                         break
                 else:
-                    thr = 1  # becauce all element are 0, set thr=1 make mask mask out everything
+                    thr = torch.tensor(1)  # becauce all element are 0, set thr=1 make mask mask out everything
                     mask = tensor.abs().to(self.device) >= thr.to(self.device)
                     selected = mask.sum()
             else:

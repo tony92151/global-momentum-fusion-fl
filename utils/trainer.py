@@ -28,11 +28,10 @@ class trainer:
         self.last_model = None
         self.training_loss = 0
         self.warmup = warmup
-        if self.config.trainer.get_optimizer() == "crossentropy":
+        if self.config.trainer.get_lossfun() == "crossentropy":
             self.loss_function = nn.CrossEntropyLoss()
 
-        if writer is not None:
-            self.writer = writer
+        self.writer = writer
 
     def set_mdoel(self, mod):
         self.last_model = copy.deepcopy(mod)
@@ -89,7 +88,8 @@ class trainer:
             # local_g.append(optimizer.decompress(optimizer.get_compressed_gradient()))
         optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
 
-        if round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup():
+        if self.config.gf.get_global_fusion or \
+                (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
             optimizer.compress(compress=True, momentum_correction=True)
         else:
             optimizer.compress(global_momentum=self.last_gradient["gradient"], compress=True, momentum_correction=True)

@@ -31,8 +31,7 @@ class evaluater:
         self.device = device
         self.loss_function = nn.CrossEntropyLoss()
 
-        if writer is not None:
-            self.writer = writer
+        self.writer = writer
 
     def eval_run(self, model, round_):
         losses = []
