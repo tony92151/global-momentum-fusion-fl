@@ -42,6 +42,7 @@ if __name__ == '__main__':
     con_path = os.path.abspath(args.config)
     out_path = os.path.abspath(args.output)
 
+    print("Read cinfig at : {}".format(con_path))
     config = Configer(con_path)
 
     tb_path = os.path.join(config.general.get_tbpath(), str(int(time.time()))) if config.general.get_tbpath() == "./tblogs" \
@@ -70,7 +71,8 @@ if __name__ == '__main__':
                                 writer=writer,
                                 warmup=w))
 
-    net = Net()
+    # net = Net()
+    net = ResNet18_cifar()
     for tr in trainers:
         tr.set_mdoel(net)
 
@@ -109,6 +111,7 @@ if __name__ == '__main__':
         writer.add_scalar("test loss", l, global_step=epoch, walltime=None)
         writer.add_scalar("test acc", a, global_step=epoch, walltime=None)
 
-        traffic += get_serialize_size(gs) * 2  # clients upload and aggregator download and upload
-        traffic += get_serialize_size(rg) * 5  # aggregator upload and 4 clients download
         writer.add_scalar("traffic(MB)", traffic, global_step=epoch, walltime=None)
+
+    time.sleep(30)
+    print("Done")

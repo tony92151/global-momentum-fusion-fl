@@ -88,7 +88,7 @@ class trainer:
             # local_g.append(optimizer.decompress(optimizer.get_compressed_gradient()))
         optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
 
-        if self.config.gf.get_global_fusion or \
+        if not self.config.gf.get_global_fusion() or \
                 (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
             optimizer.compress(compress=True, momentum_correction=True)
         else:

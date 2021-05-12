@@ -58,12 +58,12 @@ def aggrete(gradient_list, device=torch.device("cpu"), aggrete_bn=False):
 
 
 def decompress(gradient, device=torch.device("cpu")):
-    compresser = GFCCompressor(device=torch.device("cuda:0"))
+    compresser = GFCCompressor(device=device)
     return compresser.decompress(gradient)
 
 
 def compress(gradient, device=torch.device("cpu")):
-    compresser = GFCCompressor(device=torch.device("cuda:0"))
+    compresser = GFCCompressor(device=device)
     return compresser.compress(gradient, gmome=None, compress=False)
 
 
