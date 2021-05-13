@@ -22,6 +22,28 @@ class ResNet101_cifar(torchvision.models.resnet.ResNet):
                                               num_classes=10)
 
 
+##########################################################################################
+class ResNet18_femnist(torchvision.models.resnet.ResNet):
+    def __init__(self):
+        super(ResNet18_femnist, self).__init__(block=torchvision.models.resnet.BasicBlock, layers=[2, 2, 2, 2],
+                                               num_classes=62)
+        self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=1, padding=3, bias=False)
+
+
+class ResNet50_femnist(torchvision.models.resnet.ResNet):
+    def __init__(self):
+        super(ResNet50_femnist, self).__init__(block=torchvision.models.resnet.BasicBlock, layers=[3, 4, 6, 3],
+                                               num_classes=62)
+        self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=1, padding=3, bias=False)
+
+
+class ResNet101_femnist(torchvision.models.resnet.ResNet):
+    def __init__(self):
+        super(ResNet101_femnist, self).__init__(block=torchvision.models.resnet.Bottleneck, layers=[3, 4, 23, 3],
+                                                num_classes=62)
+        self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=1, padding=3, bias=False)
+
+
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
@@ -40,10 +62,8 @@ class Net(nn.Module):
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
-    
-    
-    
+
+
 class ResNet110_cifar_gdc(CifarResNet):
     def __init__(self):
-        super(ResNet110_cifar_gdc, self).__init__(params=[(16, 18, 1), (32, 18, 2), (64, 18, 2)])
-        
+        super(ResNet110_cifar_gdc, self).__init__(params=[(16, 18, 1), (32, 18, 2), (64, 18, 2)], num_classes=10)

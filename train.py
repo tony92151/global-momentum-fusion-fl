@@ -18,7 +18,7 @@ from utils.dataloaders import cifar_dataloaders
 from utils.trainer import trainer
 from utils.aggregator import aggrete, decompress, get_serialize_size
 from utils.eval import evaluater
-from utils.models import ResNet101_cifar, ResNet50_cifar, ResNet18_cifar, Net, ResNet110_cifar_gdc
+from utils.models import *
 
 
 def init_writer(tbpath):
@@ -73,12 +73,17 @@ if __name__ == '__main__':
                                 warmup=w))
 
     # net = Net()
-    model_table={
-        "resnet18": ResNet18_cifar,
-        "resnet50": ResNet50_cifar,
-        "resnet101": ResNet101_cifar,
-        "small": Net,
-        "resnet110": ResNet110_cifar_gdc,
+    model_table = {
+        # for cifar10
+        "resnet18_cifar": ResNet18_cifar,
+        "resnet50_cifar": ResNet50_cifar,
+        "resnet101_cifar": ResNet101_cifar,
+        "small_cifar": Net,
+        "resnet110_cifar": ResNet110_cifar_gdc,
+        # for femnist
+        "resnet18_femnist": ResNet18_femnist,
+        "resnet50_femnist": ResNet50_femnist,
+        "resnet101_femnist": ResNet101_femnist,
     }
     net = model_table[config.trainer.get_model()]()
 

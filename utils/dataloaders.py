@@ -3,6 +3,8 @@ import os
 import torch
 import torchvision
 from torchvision import transforms
+from torch.utils.data import DataLoader, TensorDataset, Dataset
+import numpy as np
 
 
 def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.json", batch_size=128):
@@ -39,3 +41,64 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
                                              shuffle=True, num_workers=2)
 
     return {"test": testloader, "train": trainloaders}
+
+
+class MNISTDataset(Dataset):
+    """EMNIST dataset"""
+
+    def __init__(self, feature, target, transform=None):
+        self.X = []
+        self.Y = target
+        if transform is not None:
+            for i in range(len(feature)):
+                self.X.append(transform(feature[i]))
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.Y[idx]
+
+
+def femnist_dataloaders(root="./data/femnist", batch_size=128):
+    data_transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))]
+    )
+    train_data = torch.load(os.path.join(root, "train_data.pt"))
+    test_data = torch.load(os.path.join(root, "test_data.pt"))
+
+    trainloaders = []
+    for i in train_data["users"]:
+        x = np.array(train_data["user_data"][i]["x"])
+        y = np.array(train_data["user_data"][i]["y"])
+        x = x.reshape(-1, 28, 28)
+        train_set = MNISTDataset(torch.from_numpy(x), torch.from_numpy(y), transform=data_transform)
+        trainloaders.append(torch.utils.data.DataLoader(train_set,
+                                                        batch_size=batch_size,
+                                                        num_workers=2,
+                                                        shuffle=True))
+
+    testloaders = []
+    xs = np.array([])
+    ys = np.array([])
+    for i in range(test_data.keys()):
+        x = np.array(test_data["user_data"][i]["x"])
+        y = np.array(test_data["user_data"][i]["y"])
+        x = x.reshape(-1, 28, 28)
+        test_set = MNISTDataset(torch.from_numpy(x), torch.from_numpy(y), transform=data_transform)
+        testloaders.append(torch.utils.data.DataLoader(test_set,
+                                                       batch_size=batch_size,
+                                                       num_workers=2,
+                                                       shuffle=True))
+        np.append(xs, x)
+        np.append(ys, y)
+
+    test_set = MNISTDataset(torch.from_numpy(xs), torch.from_numpy(ys), transform=data_transform)
+    testloader = torch.utils.data.DataLoader(test_set,
+                                             batch_size=batch_size,
+                                             num_workers=2,
+                                             shuffle=True)
+
+    return {"test": testloader, "train": trainloaders, "test_single": testloaders}
