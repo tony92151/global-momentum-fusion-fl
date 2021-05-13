@@ -41,6 +41,7 @@ if __name__ == '__main__':
 
     con_path = os.path.abspath(args.config)
     out_path = os.path.abspath(args.output)
+    os.makedirs(out_path, exist_ok=True)
 
     print("Read cinfig at : {}".format(con_path))
     config = Configer(con_path)
@@ -72,7 +73,14 @@ if __name__ == '__main__':
                                 warmup=w))
 
     # net = Net()
-    net = ResNet18_cifar()
+    model_table={
+        "resnet18": ResNet18_cifar,
+        "resnet50": ResNet50_cifar,
+        "resnet101": ResNet101_cifar,
+        "small": Net,
+    }
+    net = model_table[config.trainer.get_model()]()
+
     for tr in trainers:
         tr.set_mdoel(net)
 
@@ -108,10 +116,31 @@ if __name__ == '__main__':
 
         test_acc = sum(test_acc) / len(test_acc)
         test_loss = sum(test_loss) / len(test_loss)
-        writer.add_scalar("test loss", l, global_step=epoch, walltime=None)
-        writer.add_scalar("test acc", a, global_step=epoch, walltime=None)
+        writer.add_scalar("test loss", test_loss, global_step=epoch, walltime=None)
+        writer.add_scalar("test acc", test_acc, global_step=epoch, walltime=None)
 
         writer.add_scalar("traffic(MB)", traffic, global_step=epoch, walltime=None)
+
+    # save result
+    result_path = os.path.join(out_path, "result.json")
+    if os.path.isfile(result_path):
+        f = open(result_path, 'w')
+        json.dump({}, f)
+        f.close()
+
+    file_ = open(result_path, 'r')
+    context = json.load(file_)
+    file_.close()
+
+    name = config.general.get_tbpath().split("/")[-1]
+    if name not in context.keys():
+        context[name] = [{"test_acc": test_acc, "test loss": test_loss}]
+    else:
+        context[name].append({"test_acc": test_acc, "test loss": test_loss})
+
+    f = open(result_path, 'w')
+    json.dump(context, f)
+    f.close()
 
     time.sleep(30)
     print("Done")

@@ -109,7 +109,7 @@ if __name__ == '__main__':
     datas = []
     for d in data:
         datas = datas + d
-    datas = [d[3] for d in datas]  # only index
+    datas = [(d[0], d[3]) for d in datas]  # only label and index
 
     packages = []
 
@@ -128,7 +128,14 @@ if __name__ == '__main__':
     lients_json = {}
 
     for i in range(len(packages)):
-        clients_json["{}".format(i)] = packages[i]
+        clients_json["{}".format(i)] = [p[1] for p in packages[i]]
 
     with open(os.path.join(path, "niid", "index.json"), 'w') as fo:
         json.dump(clients_json, fo)
+
+    # print data
+    for j in range(number_of_client):
+        ans = [0 for i in range(10)]
+        for i in packages[int(j)]: 
+            ans[i[0]] +=1
+        print("client: {} ".format(j), ans, sum(ans))

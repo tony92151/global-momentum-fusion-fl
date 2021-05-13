@@ -20,6 +20,9 @@ class config_trainer:
 
     def get_device(self):
         return self.config["device"]
+    
+    def get_model(self) -> str:
+        return self.config["model"]
 
     def get_dataset_type(self):
         return self.config["dataset_type"]
