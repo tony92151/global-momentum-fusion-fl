@@ -1,6 +1,7 @@
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
+from utils.dgc_model.resnet import CifarResNet
 
 
 class ResNet18_cifar(torchvision.models.resnet.ResNet):
@@ -39,3 +40,10 @@ class Net(nn.Module):
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
+    
+    
+    
+class ResNet110_cifar_gdc(CifarResNet):
+    def __init__(self):
+        super(ResNet110_cifar_gdc, self).__init__(params=[(16, 18, 1), (32, 18, 2), (64, 18, 2)])
+        

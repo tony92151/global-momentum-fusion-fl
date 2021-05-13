@@ -18,7 +18,7 @@ from utils.dataloaders import cifar_dataloaders
 from utils.trainer import trainer
 from utils.aggregator import aggrete, decompress, get_serialize_size
 from utils.eval import evaluater
-from utils.models import ResNet101_cifar, ResNet50_cifar, ResNet18_cifar, Net
+from utils.models import ResNet101_cifar, ResNet50_cifar, ResNet18_cifar, Net, ResNet110_cifar_gdc
 
 
 def init_writer(tbpath):
@@ -78,6 +78,7 @@ if __name__ == '__main__':
         "resnet50": ResNet50_cifar,
         "resnet101": ResNet101_cifar,
         "small": Net,
+        "resnet110": ResNet110_cifar_gdc,
     }
     net = model_table[config.trainer.get_model()]()
 
@@ -123,7 +124,7 @@ if __name__ == '__main__':
 
     # save result
     result_path = os.path.join(out_path, "result.json")
-    if os.path.isfile(result_path):
+    if not os.path.isfile(result_path):
         f = open(result_path, 'w')
         json.dump({}, f)
         f.close()
@@ -139,7 +140,7 @@ if __name__ == '__main__':
         context[name].append({"test_acc": test_acc, "test loss": test_loss})
 
     f = open(result_path, 'w')
-    json.dump(context, f)
+    json.dump(context, f, indent=4)
     f.close()
 
     time.sleep(30)
