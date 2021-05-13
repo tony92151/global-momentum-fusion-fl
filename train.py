@@ -14,7 +14,7 @@ import time, copy
 
 from globalfusion.warmup import warmup
 from torch.utils.tensorboard import SummaryWriter
-from utils.dataloaders import cifar_dataloaders
+from utils.dataloaders import cifar_dataloaders, femnist_dataloaders
 from utils.trainer import trainer
 from utils.aggregator import aggrete, decompress, get_serialize_size
 from utils.eval import evaluater
@@ -60,7 +60,11 @@ if __name__ == '__main__':
     if "cifar10" in config.trainer.get_dataset_path():
         dataloaders = cifar_dataloaders(root=config.trainer.get_dataset_path(),
                                         index_path=os.path.join(config.trainer.get_dataset_path(),
-                                                                config.trainer.get_dataset_type(), "index.json"))
+                                                                config.trainer.get_dataset_type(), "index.json"),
+                                        batch_size=config.trainer.get_local_bs())
+    elif "femnist" in config.trainer.get_dataset_path():
+        dataloaders = femnist_dataloaders(root=config.trainer.get_dataset_path(),
+                                          batch_size=config.trainer.get_local_bs())
 
     # Init trainers
     trainers = []
