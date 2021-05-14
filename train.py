@@ -29,10 +29,15 @@ def init_writer(tbpath):
     return writer
 
 
+def run(job, arg):
+    return job(arg)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', help="path to config", type=str, default=None)
     parser.add_argument('--output', help="output", type=str, default=None)
+    parser.add_argument('--pool', help="Multiprocess Worker Pools", type=int, default=-1)
     args = parser.parse_args()
 
     if args.config is None or args.output is None:
@@ -43,10 +48,17 @@ if __name__ == '__main__':
     out_path = os.path.abspath(args.output)
     os.makedirs(out_path, exist_ok=True)
 
+    num_pool = args.pool
+    if not num_pool == -1:
+        from multiprocessing import Pool
+
+        pool = Pool(processes=num_pool)
+
     print("Read cinfig at : {}".format(con_path))
     config = Configer(con_path)
 
-    tb_path = os.path.join(config.general.get_tbpath(), str(int(time.time()))) if config.general.get_tbpath() == "./tblogs" \
+    tb_path = os.path.join(config.general.get_tbpath(),
+                           str(int(time.time()))) if config.general.get_tbpath() == "./tblogs" \
         else config.general.get_tbpath()
 
     writer = init_writer(tbpath=os.path.abspath(tb_path))
@@ -64,7 +76,8 @@ if __name__ == '__main__':
                                         batch_size=config.trainer.get_local_bs())
     elif "femnist" in config.trainer.get_dataset_path():
         dataloaders = femnist_dataloaders(root=config.trainer.get_dataset_path(),
-                                          batch_size=config.trainer.get_local_bs())
+                                          batch_size=config.trainer.get_local_bs(),
+                                          clients=config.general.get_nodes())
 
     # Init trainers
     print("Nodes: {}".format(config.general.get_nodes()))
@@ -104,10 +117,14 @@ if __name__ == '__main__':
     # train
     for epoch in tqdm(range(config.trainer.get_max_iteration())):
         gs = []
-        for i, tr in zip(range(len(trainers)), trainers):
-            _ = tr.train_run(round_=epoch)
-            gs.append(tr.last_gradient)
-            # writer.add_scalar("loss of {}".format(i), tr.training_loss, global_step=epoch, walltime=None)
+
+        if not num_pool == -1:
+            gs = pool.starmap(run, [(tr.train_run, epoch) for tr in trainers])
+        else:
+            for i, tr in zip(range(len(trainers)), trainers):
+                _ = tr.train_run(round_=epoch)
+                gs.append(tr.last_gradient)
+                # writer.add_scalar("loss of {}".format(i), tr.training_loss, global_step=epoch, walltime=None)
 
         for i in range(len(gs)):
             gs[i]["gradient"] = decompress(gs[i]["gradient"], device=torch.device("cuda:0"))
