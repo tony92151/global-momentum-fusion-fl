@@ -67,11 +67,12 @@ if __name__ == '__main__':
                                           batch_size=config.trainer.get_local_bs())
 
     # Init trainers
+    print("Nodes: {}".format(config.general.get_nodes()))
     trainers = []
     for i in range(config.general.get_nodes()):
         trainers.append(trainer(config=config,
                                 device=torch.device("cuda:0"),
-                                dataloader=dataloaders["train"][i],
+                                dataloader=dataloaders["train_s"][i],
                                 cid=i,
                                 writer=writer,
                                 warmup=w))

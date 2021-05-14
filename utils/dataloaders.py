@@ -70,6 +70,8 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128):
     test_data = torch.load(os.path.join(root, "test_data.pt"))
 
     trainloaders = []
+    xs = np.array([])
+    ys = np.array([])
     for i in train_data["users"]:
         x = np.array(train_data["user_data"][i]["x"])
         y = np.array(train_data["user_data"][i]["y"])
@@ -79,11 +81,23 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128):
                                                         batch_size=batch_size,
                                                         num_workers=2,
                                                         shuffle=True))
+        if len(xs)==0:
+            xs = x
+            ys = y
+            continue
+        np.append(xs, x, axis=0)
+        np.append(ys, y, axis=0)
+    train_set = MNISTDataset(torch.from_numpy(xs), torch.from_numpy(ys), transform=data_transform)
+    trainloader = torch.utils.data.DataLoader(test_set,
+                                             batch_size=batch_size,
+                                             num_workers=2,
+                                             shuffle=True)
 
+    #############################################################################
     testloaders = []
     xs = np.array([])
     ys = np.array([])
-    for i in range(test_data.keys()):
+    for i in test_data["users"]:
         x = np.array(test_data["user_data"][i]["x"])
         y = np.array(test_data["user_data"][i]["y"])
         x = x.reshape(-1, 28, 28)
@@ -92,13 +106,20 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128):
                                                        batch_size=batch_size,
                                                        num_workers=2,
                                                        shuffle=True))
-        np.append(xs, x)
-        np.append(ys, y)
+        if len(xs)==0:
+            xs = x
+            ys = y
+            continue
+        np.append(xs, x, axis=0)
+        np.append(ys, y, axis=0)
 
     test_set = MNISTDataset(torch.from_numpy(xs), torch.from_numpy(ys), transform=data_transform)
     testloader = torch.utils.data.DataLoader(test_set,
                                              batch_size=batch_size,
                                              num_workers=2,
                                              shuffle=True)
-
-    return {"test": testloader, "train": trainloaders, "test_single": testloaders}
+    # test: single loader
+    # train: single loader
+    # train_s: loaders
+    # test_s: loaders
+    return {"test": testloader, "train_s": trainloaders, "test_s": testloaders, "train": trainloader}

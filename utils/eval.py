@@ -57,7 +57,7 @@ class evaluater:
                 correct += preds_tensor.eq(target).sum().item()
 
         losses = sum(losses) / len(losses)
-        acc = correct / len(self.dataloader.dataset.targets)
+        acc = correct / len(self.dataloader.dataset)
 
         if self.writer is not None:
             self.writer.add_scalar("test loss", losses, global_step=round_, walltime=None)
