@@ -69,24 +69,17 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     train_data = torch.load(os.path.join(root, "train_data.pt"))
     test_data = torch.load(os.path.join(root, "test_data.pt"))
 
-    train_data_ = {'users': [], 'user_data': {}}
-    test_data_ = {'users': [], 'user_data': {}}
+    train_data['users'] = train_data['users'][:clients]
 
-    train_data_['users'] += train_data['users'][:clients]
-    for i in train_data_['users']:
-        train_data_['user_data'].update(train_data['user_data'][i])
-
-    test_data_['users'] += test_data['users'][:clients]
-    for i in train_data_['users']:
-        test_data_['user_data'].update(train_data['user_data'][i])
+    test_data['users'] = test_data['users'][:clients]
 
     #############################################################################
     trainloaders = []
     xs = np.array([])
     ys = np.array([])
     for i in train_data["users"]:
-        x = np.array(train_data_["user_data"][i]["x"])
-        y = np.array(train_data_["user_data"][i]["y"])
+        x = np.array(train_data["user_data"][i]["x"])
+        y = np.array(train_data["user_data"][i]["y"])
         x = x.reshape(-1, 28, 28)
         train_set = MNISTDataset(torch.from_numpy(x), torch.from_numpy(y), transform=data_transform)
         trainloaders.append(torch.utils.data.DataLoader(train_set,
@@ -110,8 +103,8 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     xs = np.array([])
     ys = np.array([])
     for i in test_data["users"]:
-        x = np.array(test_data_["user_data"][i]["x"])
-        y = np.array(test_data_["user_data"][i]["y"])
+        x = np.array(test_data["user_data"][i]["x"])
+        y = np.array(test_data["user_data"][i]["y"])
         x = x.reshape(-1, 28, 28)
         test_set = MNISTDataset(torch.from_numpy(x), torch.from_numpy(y), transform=data_transform)
         testloaders.append(torch.utils.data.DataLoader(test_set,
