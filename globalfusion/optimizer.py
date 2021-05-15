@@ -72,7 +72,7 @@ class opt(torch.optim.Optimizer):
 class GFDGCSGD(opt):
     def __init__(self, params, cid=-1, lr=None, dgc_momentum=0.9, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False, compress_ratio=0.5, fusing_ratio=0.5, checkpoint=False,
-                 device=torch.device("cpu")):
+                 device=torch.device("cpu"), pool=None):
         if lr is None and lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if momentum < 0.0:
@@ -81,7 +81,7 @@ class GFDGCSGD(opt):
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
 
         self.memory = FGCMemory(momentum=dgc_momentum, device=device)
-        self.compressor = GFCCompressor(compress_ratio=compress_ratio, fusing_ratio=fusing_ratio, device=device)
+        self.compressor = GFCCompressor(compress_ratio=compress_ratio, fusing_ratio=fusing_ratio, device=device, pool=pool)
         self.checkpoint = checkpoint
         self.device = device
         self.cid = cid

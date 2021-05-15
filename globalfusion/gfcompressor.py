@@ -1,7 +1,9 @@
 import torch
 import copy
 import math
-
+# from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+# from torch.multiprocessing import Pool
+torch.multiprocessing.set_start_method('spawn', force=True)
 
 def normalize(value, device=torch.device("cpu")):
     new_value = []
@@ -15,12 +17,13 @@ def normalize(value, device=torch.device("cpu")):
 
 
 class GFCCompressor:
-    def __init__(self, compress_ratio=0.5, fusing_ratio=0.8, device=torch.device("cpu")):
-        #super().__init__(average=True, tensors_size_are_same=False)
+    def __init__(self, compress_ratio=0.5, fusing_ratio=0.8, device=torch.device("cpu"), pool=None):
+        # super().__init__(average=True, tensors_size_are_same=False)
         self.compress_ratio = compress_ratio
         self.fusing_ratio = fusing_ratio
         self.param_groups_c = None
         self.device = device
+        self.pool = pool
 
     def clean(self):
         self.param_groups_c = None
@@ -34,8 +37,31 @@ class GFCCompressor:
         if gmome is not None:
             n_grad = normalize(agg_gradient, device=self.device)
             n_mome = normalize(gmome, device=self.device)
+        else:
+            n_grad = None
+            n_mome = None
 
         compressed_grad = []
+        ############################################################
+        # https://docs.python.org/zh-tw/3/library/concurrent.futures.html#processpoolexecutor-example
+        # if self.pool is not None:
+        #     # gmome=None, n_grad=None, n_mome=None, fusing_ratio=1.0
+        #     prims = [{"tensor": copy.deepcopy(agg_gradient[t]),
+        #               "idx": t,
+        #               "gmome": gmome,
+        #               "n_grad": n_grad,
+        #               "n_mome": n_mome,
+        #               "compress_ratio": self.compress_ratio,
+        #               "compress": compress,
+        #               "fusing_ratio": self.fusing_ratio,
+        #               "device": self.device}
+        #              for t in range(len(agg_gradient))]
+        #     #with ProcessPoolExecutor(max_workers=self.pool) as executor:
+        #     #    procs = executor.map(layer_compress, prims)
+        #     with Pool(processes=self.pool) as p:  # Paralleizing over 2 GPUs
+        #        results = p.map(layer_compress, prims)
+        #     return [i for i in results]
+        ############################################################
 
         for t in range(len(agg_gradient)):
             tensor = agg_gradient[t].to(self.device)
@@ -106,3 +132,64 @@ class GFCCompressor:
             tensor_decompressed.scatter_(0, indices, values)
             decompressed_mem.append(tensor_decompressed.view(shape))
         return decompressed_mem
+
+
+def layer_compress(dic):
+    tensor = dic["tensor"]
+    t = dic["idx"]
+    gmome = dic["gmome"]
+    n_grad = dic["n_grad"]
+    n_mome = dic["n_mome"]
+    compress_ratio = dic["compress_ratio"]
+    compress = dic["compress"]
+    fusing_ratio = dic["fusing_ratio"]
+    device = dic["device"]
+
+    tensor = tensor.to(device)
+
+    shape = list(tensor.size())
+    tensor = tensor.flatten()
+    numel = tensor.numel()
+
+    if gmome is not None:
+        tensor_a = fusing_ratio * n_mome[t] + (1 - fusing_ratio) * n_grad[t]
+    else:
+        tensor_a = tensor
+
+    tensor_a = tensor_a.abs()
+    tensor_a = tensor_a[tensor_a > 0]
+
+    if not len(tensor_a) == 0:
+        tmin = torch.min(tensor_a)
+        tmax = torch.max(tensor_a)
+    else:
+        compress = False
+
+    if compress or (compress_ratio == 1):
+        if not len(tensor_a) == 0:
+            for i in range(10):
+                thr = (tmax + tmin) / 2
+                mask = tensor.abs().to(device) >= thr.to(device)
+                selected = mask.sum()
+
+                if selected > (tensor_a.numel() * min(compress_ratio + 0.05, 1)):
+                    tmin = thr
+                    continue
+                if selected < (tensor_a.numel() * max(compress_ratio - 0.05, 0.01)):
+                    tmax = thr
+                    continue
+                break
+        else:
+            thr = torch.tensor(1)  # becauce all element are 0, set thr=1 make mask mask out everything
+            mask = tensor.abs().to(device) >= thr.to(device)
+            selected = mask.sum()
+    else:
+        mask = tensor.abs().to(device) > 0
+        # selected = mask.sum()
+
+    indices, = torch.where(mask)
+    values = tensor[indices]
+
+    tensor_compressed = values.cpu().tolist()  # , indices
+    ctx = shape, mask.cpu().tolist(), numel
+    return tensor_compressed, ctx

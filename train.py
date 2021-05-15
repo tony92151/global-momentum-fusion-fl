@@ -50,9 +50,8 @@ if __name__ == '__main__':
 
     num_pool = args.pool
     if not num_pool == -1:
-        from multiprocessing import Pool
-
-        pool = Pool(processes=num_pool)
+        from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor
+        print("Pool: {}".format(num_pool))
 
     print("Read cinfig at : {}".format(con_path))
     config = Configer(con_path)
@@ -99,6 +98,7 @@ if __name__ == '__main__':
         "small_cifar": Net,
         "resnet110_cifar": ResNet110_cifar_gdc,
         # for femnist
+        "resnet9_femnist": ResNet9_femnist,
         "resnet18_femnist": ResNet18_femnist,
         "resnet50_femnist": ResNet50_femnist,
         "resnet101_femnist": ResNet101_femnist,
@@ -117,23 +117,30 @@ if __name__ == '__main__':
     # train
     for epoch in tqdm(range(config.trainer.get_max_iteration())):
         gs = []
-
         if not num_pool == -1:
-            gs = pool.starmap(run, [(tr.train_run, epoch) for tr in trainers])
+            futures = []
+            executor = ThreadPoolExecutor(max_workers=num_pool)
+            for tr in trainers:
+                future = executor.submit(tr.train_run, epoch)
+                futures.append(future)
+            executor.shutdown(True)
+            for tr in trainers:
+                gs.append(tr.last_gradient)
+                        
         else:
             for i, tr in zip(range(len(trainers)), trainers):
                 _ = tr.train_run(round_=epoch)
                 gs.append(tr.last_gradient)
                 # writer.add_scalar("loss of {}".format(i), tr.training_loss, global_step=epoch, walltime=None)
-
+        #print("decompress", time.time())
         for i in range(len(gs)):
             gs[i]["gradient"] = decompress(gs[i]["gradient"], device=torch.device("cuda:0"))
 
         rg = aggrete(gs, device=torch.device("cuda:0"), aggrete_bn=False)
-
+        #print("one step", time.time())
         for tr in trainers:
             tm = tr.opt_step_base_model(round_=epoch, base_gradient=rg)
-
+        #print("eval_run", time.time())
         # eval
         test_acc = []
         test_loss = []

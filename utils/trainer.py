@@ -59,10 +59,12 @@ class trainer:
                              compress_ratio=self.config.dgc.get_compress_ratio(),
                              fusing_ratio=self.config.gf.get_fusing_ratio(),
                              checkpoint=True,
-                             device=self.device)
+                             device=self.device,
+                             pool=None)
 
         eploss = []
         # print("train start, {}".format(time.time()))
+        #print(">> train", time.time())
         for i in range(1):
             # print("CID: {}, ep :{}".format(round_, i))
             losses = []
@@ -87,7 +89,7 @@ class trainer:
             # optimizer.compress(compress=False)
             # local_g.append(optimizer.decompress(optimizer.get_compressed_gradient()))
         optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
-
+        #print(">> compress", time.time())
         if not self.config.gf.get_global_fusion() or \
                 (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
             optimizer.compress(compress=True, momentum_correction=True)
@@ -118,6 +120,7 @@ class trainer:
         optimizer = GFDGCSGD(params=model.parameters(), lr=lr, device=self.device)
         # self.last_gradient = copy.deepcopy(base_gradient)
         # optimizer.set_gradient(base_gradient)
+        base_gradient["gradient"] = [t.to(self.device) for t in base_gradient["gradient"]]
         optimizer.one_step(base_gradient["gradient"])
 
         if 'bn' in self.last_gradient.keys():
