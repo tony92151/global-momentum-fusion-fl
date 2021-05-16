@@ -22,7 +22,8 @@ class trainer:
                  warmup=None):
         self.config = config
         self.cid = cid
-        self.dataloader = copy.deepcopy(dataloader)  # path to dataset
+        #self.dataloader = copy.deepcopy(dataloader)
+        self.dataloader = dataloader
         self.device = device
         self.last_gradient = None
         self.last_model = None
@@ -105,7 +106,7 @@ class trainer:
         # update bn
         self.last_gradient = copy.deepcopy(optimizer.memory.compressed_mem)
         self.training_loss = eploss
-
+        #print(">> done", time.time())
         return copy.deepcopy(model)  # , eploss, copy.deepcopy(optimizer.memory.compressed_mem)
 
     def opt_step_base_model(self, round_, base_model=None, base_gradient=None):

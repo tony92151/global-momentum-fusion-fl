@@ -19,7 +19,7 @@ from utils.trainer import trainer
 from utils.aggregator import aggrete, decompress, get_serialize_size
 from utils.eval import evaluater
 from utils.models import *
-
+torch.manual_seed(0)
 
 def init_writer(tbpath):
     # tbpath = "/root/notebooks/tensorflow/logs/test"
@@ -38,6 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('--config', help="path to config", type=str, default=None)
     parser.add_argument('--output', help="output", type=str, default=None)
     parser.add_argument('--pool', help="Multiprocess Worker Pools", type=int, default=-1)
+    parser.add_argument('--gpu', help="GPU usagre. ex: 0,1,2", type=str, default="0")
     args = parser.parse_args()
 
     if args.config is None or args.output is None:
@@ -51,7 +52,13 @@ if __name__ == '__main__':
     num_pool = args.pool
     if not num_pool == -1:
         from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor
-        print("Pool: {}".format(num_pool))
+        print("\nPool: {}".format(num_pool))
+
+    gpus = [int(i) for i in args.gpu.split(",")]
+    if len(gpus) > torch.cuda.device_count() or max(gpus) > torch.cuda.device_count():
+        raise("GPU unavailable.")        
+    else:
+        print("\nGPU uasge: {}".format(gpus))
 
     print("Read cinfig at : {}".format(con_path))
     config = Configer(con_path)
@@ -68,6 +75,7 @@ if __name__ == '__main__':
                base_step=config.trainer.get_base_step(),
                end_step=config.trainer.get_end_step())
 
+    print("\nInit dataloader...")
     if "cifar10" in config.trainer.get_dataset_path():
         dataloaders = cifar_dataloaders(root=config.trainer.get_dataset_path(),
                                         index_path=os.path.join(config.trainer.get_dataset_path(),
@@ -78,12 +86,16 @@ if __name__ == '__main__':
                                           batch_size=config.trainer.get_local_bs(),
                                           clients=config.general.get_nodes())
 
+    print("Total train images: {}".format(len(dataloaders["train"].dataset)))
+    print("Total test images: {}".format(len(dataloaders["test"].dataset)))
+
     # Init trainers
+    print("\nInit trainers...")
     print("Nodes: {}".format(config.general.get_nodes()))
     trainers = []
-    for i in range(config.general.get_nodes()):
+    for i in tqdm(range(config.general.get_nodes())):
         trainers.append(trainer(config=config,
-                                device=torch.device("cuda:0"),
+                                device=torch.device("cuda:{}".format(gpus[i%len(gpus)])),
                                 dataloader=dataloaders["train_s"][i],
                                 cid=i,
                                 writer=writer,
@@ -95,14 +107,16 @@ if __name__ == '__main__':
         "resnet18_cifar": ResNet18_cifar,
         "resnet50_cifar": ResNet50_cifar,
         "resnet101_cifar": ResNet101_cifar,
-        "small_cifar": Net,
+        "small_cifar": Net_cifar,
         "resnet110_cifar": ResNet110_cifar_gdc,
         # for femnist
+        "small_femnist": Net_femnist,
         "resnet9_femnist": ResNet9_femnist,
         "resnet18_femnist": ResNet18_femnist,
         "resnet50_femnist": ResNet50_femnist,
         "resnet101_femnist": ResNet101_femnist,
     }
+    print("\nInit model...")
     net = model_table[config.trainer.get_model()]()
 
     for tr in trainers:
@@ -115,6 +129,7 @@ if __name__ == '__main__':
     traffic = 0
     traffic += get_serialize_size(net) * 4  # 4 clients download
     # train
+    print("\nStart training...")
     for epoch in tqdm(range(config.trainer.get_max_iteration())):
         gs = []
         if not num_pool == -1:
@@ -129,7 +144,9 @@ if __name__ == '__main__':
                         
         else:
             for i, tr in zip(range(len(trainers)), trainers):
+                #print("trainer: {}".format(i), time.time())
                 _ = tr.train_run(round_=epoch)
+                #print("trainer done: {}".format(i), time.time())
                 gs.append(tr.last_gradient)
                 # writer.add_scalar("loss of {}".format(i), tr.training_loss, global_step=epoch, walltime=None)
         #print("decompress", time.time())
