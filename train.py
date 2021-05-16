@@ -11,6 +11,7 @@ import torch.optim as optim
 from tqdm import tqdm
 from utils.configer import Configer
 import time, copy
+from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor
 
 from globalfusion.warmup import warmup
 from torch.utils.tensorboard import SummaryWriter
@@ -37,7 +38,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', help="path to config", type=str, default=None)
     parser.add_argument('--output', help="output", type=str, default=None)
-    parser.add_argument('--pool', help="Multiprocess Worker Pools", type=int, default=-1)
+    parser.add_argument('--pool', help="Multiprocess Worker Pools", type=str, default="-1")
     parser.add_argument('--gpu', help="GPU usagre. ex: 0,1,2", type=str, default="0")
     args = parser.parse_args()
 
@@ -49,11 +50,6 @@ if __name__ == '__main__':
     out_path = os.path.abspath(args.output)
     os.makedirs(out_path, exist_ok=True)
 
-    num_pool = args.pool
-    if not num_pool == -1:
-        from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor
-        print("\nPool: {}".format(num_pool))
-
     gpus = [int(i) for i in args.gpu.split(",")]
     if len(gpus) > torch.cuda.device_count() or max(gpus) > torch.cuda.device_count():
         raise("GPU unavailable.")        
@@ -62,6 +58,14 @@ if __name__ == '__main__':
 
     print("Read cinfig at : {}".format(con_path))
     config = Configer(con_path)
+
+    num_pool = args.pool
+    if num_pool=="auto":
+        num_pool = int(config.general.get_nodes()/2)+5
+        print("\nPool: {}".format(num_pool))
+    else:
+        num_pool = int(num_pool)
+        print("\nPool: {}".format(num_pool))
 
     tb_path = os.path.join(config.general.get_tbpath(),
                            str(int(time.time()))) if config.general.get_tbpath() == "./tblogs" \
