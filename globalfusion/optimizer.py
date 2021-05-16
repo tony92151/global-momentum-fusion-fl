@@ -102,13 +102,22 @@ class GFDGCSGD(opt):
         v_ = self.compressor.compress(mem=self.memory.velocities, compress=False)
         checkpoint = {"momentums": m_,
                       "velocities": v_}
-        torch.save(self.memory, "/tmp/memory_checkpoint_{}".format(self.cid))
+        if os.getenv("memory_checkpoint") is not None:
+            savepath = os.path.join(os.getenv("memory_checkpoint"), "memory_checkpoint_{}".format(self.cid))
+        else:
+            savepath = "/tmp/memory_checkpoint_{}".format(self.cid)
+        torch.save(checkpoint, savepath)
 
     def memory_checkpoint_restore(self):
-        if not os.path.exists("/tmp/memory_checkpoint_{}".format(self.cid)):
+        if os.getenv("memory_checkpoint") is not None:
+            savepath = os.path.join(os.getenv("memory_checkpoint"), "memory_checkpoint_{}".format(self.cid))
+        else:
+            savepath = "/tmp/memory_checkpoint_{}".format(self.cid)
+
+        if not os.path.exists(savepath):
             return
         try:
-            checkpoint = torch.load("/tmp/memory_checkpoint_{}".format(self.cid))
+            checkpoint = torch.load(savepath)
             m_ = [i.to(self.device) for i in self.compressor.decompress(checkpoint['momentums'])]
             v_ = [i.to(self.device) for i in self.compressor.decompress(checkpoint['velocities'])]
             self.memory.momentums = m_

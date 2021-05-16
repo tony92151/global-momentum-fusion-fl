@@ -188,7 +188,7 @@ if __name__ == '__main__':
     context = json.load(file_)
     file_.close()
 
-    name = config.general.get_tbpath().split("/")[-1]
+    name = tb_path.split("/")[-1]
     if name not in context.keys():
         context[name] = [{"test_acc": test_acc, "test loss": test_loss}]
     else:
