@@ -11,7 +11,7 @@ import torch.optim as optim
 from tqdm import tqdm
 from utils.configer import Configer
 import time, copy
-from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 
 from globalfusion.warmup import warmup
 from torch.utils.tensorboard import SummaryWriter
@@ -20,7 +20,9 @@ from utils.trainer import trainer
 from utils.aggregator import aggrete, decompress, get_serialize_size
 from utils.eval import evaluater
 from utils.models import *
+
 torch.manual_seed(0)
+
 
 def init_writer(tbpath):
     # tbpath = "/root/notebooks/tensorflow/logs/test"
@@ -52,7 +54,7 @@ if __name__ == '__main__':
 
     gpus = [int(i) for i in args.gpu.split(",")]
     if len(gpus) > torch.cuda.device_count() or max(gpus) > torch.cuda.device_count():
-        raise("GPU unavailable.")        
+        raise ("GPU unavailable.")
     else:
         print("\nGPU uasge: {}".format(gpus))
 
@@ -60,8 +62,8 @@ if __name__ == '__main__':
     config = Configer(con_path)
 
     num_pool = args.pool
-    if num_pool=="auto":
-        num_pool = int(config.general.get_nodes()/2)+5
+    if num_pool == "auto":
+        num_pool = int(config.general.get_nodes() / 2) + 5
         print("\nPool: {}".format(num_pool))
     else:
         num_pool = int(num_pool)
@@ -99,7 +101,7 @@ if __name__ == '__main__':
     trainers = []
     for i in tqdm(range(config.general.get_nodes())):
         trainers.append(trainer(config=config,
-                                device=torch.device("cuda:{}".format(gpus[i%len(gpus)])),
+                                device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
                                 dataloader=dataloaders["train_s"][i],
                                 cid=i,
                                 writer=writer,
@@ -145,23 +147,23 @@ if __name__ == '__main__':
             executor.shutdown(True)
             for tr in trainers:
                 gs.append(tr.last_gradient)
-                        
+
         else:
             for i, tr in zip(range(len(trainers)), trainers):
-                #print("trainer: {}".format(i), time.time())
+                # print("trainer: {}".format(i), time.time())
                 _ = tr.train_run(round_=epoch)
-                #print("trainer done: {}".format(i), time.time())
+                # print("trainer done: {}".format(i), time.time())
                 gs.append(tr.last_gradient)
                 # writer.add_scalar("loss of {}".format(i), tr.training_loss, global_step=epoch, walltime=None)
-        #print("decompress", time.time())
+        # print("decompress", time.time())
         for i in range(len(gs)):
             gs[i]["gradient"] = decompress(gs[i]["gradient"], device=torch.device("cuda:0"))
 
         rg = aggrete(gs, device=torch.device("cuda:0"), aggrete_bn=False)
-        #print("one step", time.time())
+        # print("one step", time.time())
         for tr in trainers:
             tm = tr.opt_step_base_model(round_=epoch, base_gradient=rg)
-        #print("eval_run", time.time())
+        # print("eval_run", time.time())
         # eval
         test_acc = []
         test_loss = []

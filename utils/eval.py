@@ -38,7 +38,6 @@ class evaluater:
         ans = np.array([])
         res = np.array([])
         correct = 0
-        model = copy.deepcopy(model)
         model.eval().to(self.device)
         with torch.no_grad():
             for data, target in self.dataloader:

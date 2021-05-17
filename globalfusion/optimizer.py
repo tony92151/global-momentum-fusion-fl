@@ -2,7 +2,7 @@ import torch
 import copy, os, time
 from globalfusion.gfcompressor import GFCCompressor
 from collections import defaultdict
-
+from torch.optim.lr_scheduler import StepLR
 """
 Original usage:
 
@@ -26,11 +26,11 @@ for input,target in dataloader:
     output = model(input)
     loss = loss_fn(output, target)
     loss.backward()
-    # gradient accumulation
-    optimizer.gradient_collect()
-
-optimizer.compress()
-cg = optimizer.get_compressed_gradient()
+    
+    
+optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
+optimizer.compress(global_momentum=self.last_gradient["gradient"], compress=True, momentum_correction=True)
+cg = optimizer.memory.compressed_mem
 <send gradient>
 
 if <receive aggregated gradient>:
@@ -40,36 +40,8 @@ if <receive aggregated gradient>:
 """
 
 
-class opt(torch.optim.Optimizer):
-    def __init__(self, params, defaults):
-        torch._C._log_api_usage_once("python.optimizer")
-        self.defaults = defaults
-
-        if isinstance(params, torch.Tensor):
-            raise TypeError("params argument given to the optimizer should be "
-                            "an iterable of Tensors or dicts, but got " +
-                            torch.typename(params))
-
-        self.state = defaultdict(dict)
-        self.param_groups = []
-
-        # param_groups = list(params.parameters())
-        # self.param_copy = copy.deepcopy(params)
-        param_groups = list(params)
-        self.param_copy = copy.deepcopy(param_groups)
-        for p in self.param_copy:
-            p.requires_grad = False
-        if len(param_groups) == 0:
-            raise ValueError("optimizer got an empty parameter list")
-        if not isinstance(param_groups[0], dict):
-            param_groups = [{'params': param_groups}]
-
-        for param_group in param_groups:
-            self.add_param_group(param_group)
-
-
 # copy from torch/optim/sgd.py
-class GFDGCSGD(opt):
+class GFDGCSGD(torch.optim.Optimizer):
     def __init__(self, params, cid=-1, lr=None, dgc_momentum=0.9, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False, compress_ratio=0.5, fusing_ratio=0.5, checkpoint=False,
                  device=torch.device("cpu"), pool=None):
@@ -81,10 +53,14 @@ class GFDGCSGD(opt):
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
 
         self.memory = FGCMemory(momentum=dgc_momentum, device=device)
-        self.compressor = GFCCompressor(compress_ratio=compress_ratio, fusing_ratio=fusing_ratio, device=device, pool=pool)
+        self.compressor = GFCCompressor(compress_ratio=compress_ratio, fusing_ratio=fusing_ratio, device=device,
+                                        pool=pool)
         self.checkpoint = checkpoint
         self.device = device
         self.cid = cid
+        self.savepath = os.getenv("memory_checkpoint")
+
+        self.verbose = False
 
         defaults = dict(lr=lr, momentum=momentum, dampening=dampening,
                         weight_decay=weight_decay, nesterov=nesterov)
@@ -97,20 +73,23 @@ class GFDGCSGD(opt):
         for group in self.param_groups:
             group.setdefault('nesterov', False)
 
+    def print_(self, val):
+        if self.verbose:
+            print(val)
+
     def memory_checkpoint_save(self):
         m_ = self.compressor.compress(mem=self.memory.momentums, compress=False)
         v_ = self.compressor.compress(mem=self.memory.velocities, compress=False)
         checkpoint = {"momentums": m_,
                       "velocities": v_}
-        if os.getenv("memory_checkpoint") is not None:
-            savepath = os.path.join(os.getenv("memory_checkpoint"), "memory_checkpoint_{}".format(self.cid))
-        else:
-            savepath = "/tmp/memory_checkpoint_{}".format(self.cid)
+        if self.savepath is not None:
+            os.makedirs(self.savepath, exist_ok=True)
+            savepath = os.path.join(self.savepath, "memory_checkpoint_{}".format(self.cid)
         torch.save(checkpoint, savepath)
 
     def memory_checkpoint_restore(self):
-        if os.getenv("memory_checkpoint") is not None:
-            savepath = os.path.join(os.getenv("memory_checkpoint"), "memory_checkpoint_{}".format(self.cid))
+        if self.savepath is not None:
+            savepath = os.path.join(self.savepath, "memory_checkpoint_{}".format(self.cid))
         else:
             savepath = "/tmp/memory_checkpoint_{}".format(self.cid)
 
@@ -129,17 +108,6 @@ class GFDGCSGD(opt):
     def memory_checkpoint_remove(self):
         pass
         # torch.save(self.memory, "/tmp/memory_checkpoint")
-
-    def gradient_collect(self):
-        self.memory.add(self.param_groups)
-
-    def get_gradient(self):
-        g = []
-        for group in self.param_groups:
-            for p in group['params']:
-                # g.append(copy.deepcopy(p.grad).cpu())
-                g.append(copy.deepcopy(p.grad))
-        return g
 
     def set_accumulate_gradient(self, record_batchnorm=False, model=None):
 
@@ -183,17 +151,19 @@ class GFDGCSGD(opt):
             if self.checkpoint:
                 self.memory_checkpoint_restore()
             gm = self.memory.mem["gradient"]
-            # print("compensate, {}".format(time.time()))
+            self.print_("optimizer >> compensate, {}".format(time.time()))
             m = self.memory.compensate(gm)
-            # print("compress, {}".format(time.time()))
+            self.print_("optimizer >> compress, {}".format(time.time()))
             r = self.compressor.compress(m, gmome=global_momentum, compress=compress)
-            # print("compress done, {}".format(time.time()))
+            self.print_("optimizer >> compress done, {}".format(time.time()))
             self.memory.update(r)
 
             if self.checkpoint:
                 self.memory_checkpoint_save()
         else:
+            self.print_("optimizer >> compress, {}".format(time.time()))
             r = self.compressor.compress(self.memory.mem["gradient"], gmome=global_momentum, compress=compress)
+            self.print_("optimizer >> compress done, {}".format(time.time()))
 
         # bn should't be compressed
         if 'bn' in self.memory.mem.keys():
@@ -216,6 +186,21 @@ class GFDGCSGD(opt):
         for group in self.param_groups:
             for p in range(len(group['params'])):
                 group['params'][p].grad = copy.deepcopy(agged_grad[p]).to(group['params'][p].device)
+
+    def reload_model_parameter(self, params):
+        self.param_groups = []
+        param_groups = list(params)
+        if len(param_groups) == 0:
+            raise ValueError("optimizer got an empty parameter list")
+        if not isinstance(param_groups[0], dict):
+            param_groups = [{'params': param_groups}]
+
+        for param_group in param_groups:
+            self.add_param_group(param_group)
+
+    def set_learning_rate(self, lr=0.001):
+        for group in self.optimizer.param_groups:
+            group['lr'] = lr
 
     @torch.no_grad()
     def step(self, closure=None):
@@ -400,5 +385,5 @@ class _RequiredParameter(object):
     def __repr__(self):
         return "<required parameter>"
 
-required = _RequiredParameter()
 
+required = _RequiredParameter()
