@@ -28,9 +28,10 @@ class trainer:
         self.round = None
         self.last_gradient = None
         self.last_model = None
+        self.last_state = None
         self.training_loss = 0
         self.warmup = warmup
-        self.optimizer: GFDGCSGD() = None
+        self.optimizer: GFDGCSGD = None
         if self.config.trainer.get_lossfun() == "crossentropy":
             self.loss_function = nn.CrossEntropyLoss()
 
@@ -44,19 +45,6 @@ class trainer:
     def set_mdoel(self, mod):
         self.last_model = copy.deepcopy(mod)
 
-        self.optimizer = GFDGCSGD(params=copy.deepcopy(mod).parameters(),
-                                  lr=0.01,
-                                  momentum=0.9,
-                                  cid=self.cid,
-                                  weight_decay=1e-4,
-                                  nesterov=True,
-                                  dgc_momentum=self.config.dgc.get_momentum(),
-                                  compress_ratio=self.config.dgc.get_compress_ratio(),
-                                  fusing_ratio=self.config.gf.get_fusing_ratio(),
-                                  checkpoint=False,
-                                  device=self.device,
-                                  pool=None)
-
     def train_run(self, round_, base_model=None):
         if base_model is None:
             model = copy.deepcopy(self.last_model)
@@ -64,62 +52,58 @@ class trainer:
             model = copy.deepcopy(base_model)
 
         lr = self.warmup.get_lr_from_step(round_)
-        self.optimizer.set_learning_rate(lr=lr)
-
         model.train().to(self.device)
-        self.optimizer.reload_model_parameter(model.parameters())
+        optimizer = GFDGCSGD(params=model.parameters(),
+                             lr=lr,
+                             momentum=0.9,
+                             cid=self.cid,
+                             weight_decay=1e-4,
+                             nesterov=True,
+                             dgc_momentum=self.config.dgc.get_momentum(),
+                             compress_ratio=self.config.dgc.get_compress_ratio(),
+                             fusing_ratio=self.config.gf.get_fusing_ratio(),
+                             checkpoint=False,
+                             device=self.device,
+                             pool=None)
 
+        if self.last_state is not None:
+            optimizer.set_state(self.last_state)
         # optimizer = torch.optim.SGD(params=model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
         # optimizer = SGDD(params=model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
 
         eploss = []
         self.print_("trainer >> cid: {} >> train start, {}".format(self.cid, time.time()))
-        # print(">> train", time.time())
-        for i in range(1):
-            # print("CID: {}, ep :{}".format(round_, i))
+        for i in range(self.config.trainer.get_local_ep()):
             losses = []
             for data, target in self.dataloader:
                 data = data.to(self.device)
                 target = target.to(self.device)
-
-                self.optimizer.zero_grad()
-                # data = data.view(data.size(0),-1)
-
+                optimizer.zero_grad()
                 output = model(data.float())
-
                 loss = self.loss_function(output, target)
-                # print(loss.item())
                 losses.append(loss.item())
                 loss.backward()
-                self.optimizer.step()
-                # optimizer.gradient_collect()
-
+                optimizer.step()
             losses = sum(losses) / len(losses)
             eploss.append(losses)
-            # optimizer.compress(compress=False)
-            # local_g.append(optimizer.decompress(optimizer.get_compressed_gradient()))
-        self.optimizer.zero_grad()
-        self.optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
+
+        optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
         self.print_("trainer >> cid: {} >> compress, {}".format(self.cid, time.time()))
         if not self.config.gf.get_global_fusion() or \
                 (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
-            self.optimizer.compress(compress=True, momentum_correction=True)
+            optimizer.compress(compress=True, momentum_correction=True)
         else:
-            self.optimizer.compress(global_momentum=self.last_gradient["gradient"], compress=True,
-                                    momentum_correction=True)
-        # optimizer.compress(compress=True, momentum_correction=True)
-
+            optimizer.compress(global_momentum=self.last_gradient["gradient"], compress=True,
+                               momentum_correction=True)
         eploss = sum(eploss) / len(eploss)
-
         if self.writer is not None:
             self.writer.add_scalar("loss of {}".format(self.cid), eploss, global_step=round_, walltime=None)
-
         # update bn
-        self.last_gradient = copy.deepcopy(self.optimizer.get_compressed_gradient())
+        self.last_gradient = copy.deepcopy(optimizer.get_compressed_gradient())
         self.training_loss = eploss
         self.print_("trainer >> cid: {} >> done, {}".format(self.cid, time.time()))
-        self.optimizer.memory.clean()
-        return copy.deepcopy(model)  # , eploss, copy.deepcopy(optimizer.memory.compressed_mem)
+        self.last_state = optimizer.get_state()
+        return copy.deepcopy(model)
 
     def opt_step_base_model(self, base_gradient=None, round_=None, base_model=None):
         if base_model is None:
@@ -133,8 +117,6 @@ class trainer:
 
         model.to(self.device).train()
         optimizer = GFDGCSGD(params=model.parameters(), lr=lr, device=self.device)
-        # self.last_gradient = copy.deepcopy(base_gradient)
-        # optimizer.set_gradient(base_gradient)
         base_gradient["gradient"] = [t.to(self.device) for t in base_gradient["gradient"]]
         optimizer.one_step(base_gradient["gradient"])
 

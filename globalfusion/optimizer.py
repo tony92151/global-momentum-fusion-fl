@@ -77,6 +77,17 @@ class GFDGCSGD(torch.optim.Optimizer):
         if self.verbose:
             print(val)
 
+    def get_state(self):
+        stat = self.state_dict()
+        stat["momentums"] = self.memory.momentums
+        stat["velocities"] = self.memory.velocities
+        return stat
+
+    def set_state(self, sta):
+        self.load_state_dict(sta)
+        self.memory.momentums = sta["momentums"]
+        self.memory.velocities = sta["velocities"]
+
     def memory_checkpoint_save(self):
         m_ = self.compressor.compress(mem=self.memory.momentums, compress=False)
         v_ = self.compressor.compress(mem=self.memory.velocities, compress=False)
