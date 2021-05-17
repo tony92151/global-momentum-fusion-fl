@@ -33,12 +33,24 @@ class evaluater:
 
         self.writer = writer
 
-    def eval_run(self, model, round_):
+        self.round = None
+        self.last_acc = None
+        self.last_loss = None
+        self.verbose = True
+
+    def print_(self, val):
+        if self.verbose:
+            print(val)
+
+    def eval_run(self, model, round_=None):
+        if round_ is None:
+            round_ = self.round
         losses = []
         ans = np.array([])
         res = np.array([])
         correct = 0
         model.eval().to(self.device)
+        self.print_("eval >> eval start, {}".format(time.time()))
         with torch.no_grad():
             for data, target in self.dataloader:
                 # data = data.view(data.size(0),-1)
@@ -57,7 +69,7 @@ class evaluater:
 
         losses = sum(losses) / len(losses)
         acc = correct / len(self.dataloader.dataset)
-
+        self.print_("eval >> eval done, {}".format(time.time()))
         if self.writer is not None:
             self.writer.add_scalar("test loss", losses, global_step=round_, walltime=None)
             self.writer.add_scalar("test acc", acc, global_step=round_, walltime=None)

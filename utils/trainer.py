@@ -25,11 +25,12 @@ class trainer:
         # self.dataloader = copy.deepcopy(dataloader)
         self.dataloader = dataloader
         self.device = device
+        self.round = None
         self.last_gradient = None
         self.last_model = None
         self.training_loss = 0
         self.warmup = warmup
-        self.optimizer = GFDGCSGD()
+        self.optimizer: GFDGCSGD() = None
         if self.config.trainer.get_lossfun() == "crossentropy":
             self.loss_function = nn.CrossEntropyLoss()
 
@@ -97,13 +98,15 @@ class trainer:
             eploss.append(losses)
             # optimizer.compress(compress=False)
             # local_g.append(optimizer.decompress(optimizer.get_compressed_gradient()))
+        self.optimizer.zero_grad()
         self.optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
         self.print_("trainer >> cid: {} >> compress, {}".format(self.cid, time.time()))
         if not self.config.gf.get_global_fusion() or \
                 (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
             self.optimizer.compress(compress=True, momentum_correction=True)
         else:
-            self.optimizer.compress(global_momentum=self.last_gradient["gradient"], compress=True, momentum_correction=True)
+            self.optimizer.compress(global_momentum=self.last_gradient["gradient"], compress=True,
+                                    momentum_correction=True)
         # optimizer.compress(compress=True, momentum_correction=True)
 
         eploss = sum(eploss) / len(eploss)
@@ -115,14 +118,17 @@ class trainer:
         self.last_gradient = copy.deepcopy(self.optimizer.get_compressed_gradient())
         self.training_loss = eploss
         self.print_("trainer >> cid: {} >> done, {}".format(self.cid, time.time()))
+        self.optimizer.memory.clean()
         return copy.deepcopy(model)  # , eploss, copy.deepcopy(optimizer.memory.compressed_mem)
 
-    def opt_step_base_model(self, round_, base_model=None, base_gradient=None):
+    def opt_step_base_model(self, base_gradient=None, round_=None, base_model=None):
         if base_model is None:
             model = copy.deepcopy(self.last_model)
         else:
             model = copy.deepcopy(base_model)
 
+        if round_ is None:
+            round_ = self.round
         lr = self.warmup.get_lr_from_step(round_)
 
         model.to(self.device).train()

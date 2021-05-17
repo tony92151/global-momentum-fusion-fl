@@ -32,7 +32,7 @@ def add_mean_var(means=None, vrs=None, tracks=None):
     return mean_result.tolist(), vr_result.tolist(), tracks_sum
 
 
-def aggrete(gradient_list, device=torch.device("cpu"), aggrete_bn=False):
+def aggregater(gradient_list, device=torch.device("cpu"), aggrete_bn=False):
     agg_gradient = []
     for i in range(len(gradient_list[0]["gradient"])):
         result = torch.sum(torch.stack([j["gradient"][i].to(device) for j in gradient_list]), dim=0)

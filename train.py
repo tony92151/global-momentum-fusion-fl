@@ -17,7 +17,7 @@ from globalfusion.warmup import warmup
 from torch.utils.tensorboard import SummaryWriter
 from utils.dataloaders import cifar_dataloaders, femnist_dataloaders
 from utils.trainer import trainer
-from utils.aggregator import aggrete, decompress, get_serialize_size
+from utils.aggregator import aggregater, decompress, get_serialize_size
 from utils.eval import evaluater
 from utils.models import *
 
@@ -138,45 +138,68 @@ if __name__ == '__main__':
     print("\nStart training...")
     for epoch in tqdm(range(config.trainer.get_max_iteration())):
         gs = []
+
+        ####################################################################################################
+        ####################################################################################################
         if not num_pool == -1:
-            futures = []
+            # training
             executor = ThreadPoolExecutor(max_workers=num_pool)
             for tr in trainers:
-                future = executor.submit(tr.train_run, epoch)
-                futures.append(future)
+                _ = executor.submit(tr.train_run, epoch)
             executor.shutdown(True)
             for tr in trainers:
                 gs.append(tr.last_gradient)
 
+            # decompress
+            for i in range(len(gs)):
+                gs[i]["gradient"] = decompress(gs[i]["gradient"], device=torch.device("cuda:0"))
+
+            # aggregate
+            rg = aggregater(gs, device=torch.device("cuda:0"), aggrete_bn=False)
+
+            # one-step update
+            executor = ThreadPoolExecutor(max_workers=num_pool)
+            for tr in trainers:
+                tr.round = epoch
+                _ = executor.submit(tr.opt_step_base_model, rg)
+            executor.shutdown(True)
+
+            # test
+            test_acc = []
+            test_loss = []
+            ev.round = epoch
+            executor = ThreadPoolExecutor(max_workers=num_pool)
+            result = executor.map(ev.eval_run, [copy.deepcopy(tr.last_model) for tr in trainers])
+            for acc, loss in result:
+                test_acc.append(acc)
+                test_loss.append(loss)
+        ####################################################################################################
         else:
             for i, tr in zip(range(len(trainers)), trainers):
-                # print("trainer: {}".format(i), time.time())
                 _ = tr.train_run(round_=epoch)
-                # print("trainer done: {}".format(i), time.time())
                 gs.append(tr.last_gradient)
-                # writer.add_scalar("loss of {}".format(i), tr.training_loss, global_step=epoch, walltime=None)
-        # print("decompress", time.time())
-        for i in range(len(gs)):
-            gs[i]["gradient"] = decompress(gs[i]["gradient"], device=torch.device("cuda:0"))
 
-        rg = aggrete(gs, device=torch.device("cuda:0"), aggrete_bn=False)
-        # print("one step", time.time())
-        for tr in trainers:
-            tm = tr.opt_step_base_model(round_=epoch, base_gradient=rg)
-        # print("eval_run", time.time())
-        # eval
-        test_acc = []
-        test_loss = []
-        for tr in trainers:
-            a, l = ev.eval_run(model=copy.deepcopy(tr.last_model), round_=epoch)
-            test_acc.append(a)
-            test_loss.append(l)
+            for i in range(len(gs)):
+                gs[i]["gradient"] = decompress(gs[i]["gradient"], device=torch.device("cuda:0"))
+
+            rg = aggregater(gs, device=torch.device("cuda:0"), aggrete_bn=False)
+
+            for tr in trainers:
+                tm = tr.opt_step_base_model(round_=epoch, base_gradient=rg)
+
+            test_acc = []
+            test_loss = []
+            for tr in trainers:
+                acc, loss = ev.eval_run(model=copy.deepcopy(tr.last_model), round_=epoch)
+                test_acc.append(acc)
+                test_loss.append(loss)
+        ####################################################################################################
+        ####################################################################################################
 
         test_acc = sum(test_acc) / len(test_acc)
         test_loss = sum(test_loss) / len(test_loss)
         writer.add_scalar("test loss", test_loss, global_step=epoch, walltime=None)
         writer.add_scalar("test acc", test_acc, global_step=epoch, walltime=None)
-
         writer.add_scalar("traffic(MB)", traffic, global_step=epoch, walltime=None)
 
     # save result

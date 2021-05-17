@@ -84,7 +84,7 @@ class GFDGCSGD(torch.optim.Optimizer):
                       "velocities": v_}
         if self.savepath is not None:
             os.makedirs(self.savepath, exist_ok=True)
-            savepath = os.path.join(self.savepath, "memory_checkpoint_{}".format(self.cid)
+            savepath = os.path.join(self.savepath, "memory_checkpoint_{}".format(self.cid))
         torch.save(checkpoint, savepath)
 
     def memory_checkpoint_restore(self):
@@ -199,7 +199,7 @@ class GFDGCSGD(torch.optim.Optimizer):
             self.add_param_group(param_group)
 
     def set_learning_rate(self, lr=0.001):
-        for group in self.optimizer.param_groups:
+        for group in self.param_groups:
             group['lr'] = lr
 
     @torch.no_grad()
@@ -373,7 +373,7 @@ class FGCMemory:
         return self.compressed_mem
 
     def clean(self):
-        self.mem = []
+        self.mem = {"gradient": []}
         self.compressed_mem = None
         self.decompressed_mem = None
         self.can_add = True
