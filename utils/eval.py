@@ -36,7 +36,7 @@ class evaluater:
         self.round = None
         self.last_acc = None
         self.last_loss = None
-        self.verbose = True
+        self.verbose = False
 
     def print_(self, val):
         if self.verbose:

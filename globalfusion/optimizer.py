@@ -78,13 +78,12 @@ class GFDGCSGD(torch.optim.Optimizer):
             print(val)
 
     def get_state(self):
-        stat = self.state_dict()
-        stat["momentums"] = self.memory.momentums
-        stat["velocities"] = self.memory.velocities
+        stat = {"momentums": self.memory.momentums, "velocities": self.memory.velocities}
+        # stat = self.state_dict()
         return stat
 
     def set_state(self, sta):
-        self.load_state_dict(sta)
+        # self.load_state_dict(sta)
         self.memory.momentums = sta["momentums"]
         self.memory.velocities = sta["velocities"]
 

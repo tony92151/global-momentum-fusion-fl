@@ -27,6 +27,7 @@ class trainer:
         self.device = device
         self.round = None
         self.last_gradient = None
+        self.last_de_gradient = None
         self.last_model = None
         self.last_state = None
         self.training_loss = 0
@@ -93,7 +94,7 @@ class trainer:
                 (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
             optimizer.compress(compress=True, momentum_correction=True)
         else:
-            optimizer.compress(global_momentum=self.last_gradient["gradient"], compress=True,
+            optimizer.compress(global_momentum=self.last_de_gradient["gradient"], compress=True,
                                momentum_correction=True)
         eploss = sum(eploss) / len(eploss)
         if self.writer is not None:
@@ -129,4 +130,5 @@ class trainer:
                     layer.num_batches_tracked = torch.tensor(self.last_gradient["bn"][idx + 2]).clone().detach()
                     idx += 3
         self.last_model = copy.deepcopy(model)
+        self.last_de_gradient = copy.deepcopy(base_gradient)
         return copy.deepcopy(model)

@@ -32,8 +32,10 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     context = json.load(file_)
     file_.close()
 
-    trainloaders = []
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
+                                              num_workers=2, shuffle=True)
 
+    trainloaders = []
     for i in range(len(context.keys())):
         trainloaders.append(torch.utils.data.DataLoader(trainset,
                                                         batch_size=batch_size,
@@ -43,7 +45,7 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                              shuffle=True, num_workers=2)
 
-    return {"test": testloader, "train": trainloaders}
+    return {"test": testloader, "train_s": trainloaders, "train": trainloader}
 
 
 class MNISTDataset(Dataset):
