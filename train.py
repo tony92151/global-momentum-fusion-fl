@@ -1,25 +1,24 @@
 import argparse
+import copy
+import json
+import os
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import torch
-import torchvision
-import torchvision.transforms as transforms
-import os, copy, json, sys
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from utils.configer import Configer
-import time, copy
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 
 from globalfusion.warmup import warmup
-from torch.utils.tensorboard import SummaryWriter
-from utils.dataloaders import cifar_dataloaders, femnist_dataloaders
-from utils.trainer import trainer
 from utils.aggregator import aggregater, decompress, get_serialize_size
+from utils.configer import Configer
+from utils.dataloaders import cifar_dataloaders, femnist_dataloaders
 from utils.eval import evaluater
 from utils.models import *
+from utils.trainer import trainer
+
+# Thread out of memory issue.
+# https://github.com/dchevell/flask-executor/issues/6
 
 torch.manual_seed(0)
 
@@ -149,6 +148,7 @@ if __name__ == '__main__':
                 futures.append(executor.submit(tr.train_run, epoch))
             for future in as_completed(futures):
                 pass
+            del futures
 
             for tr in trainers:
                 gs.append(tr.last_gradient)
@@ -161,12 +161,13 @@ if __name__ == '__main__':
             rg = aggregater(gs, device=torch.device("cuda:0"), aggrete_bn=False)
 
             # one-step update
-            futures = []
+            futures_ = []
             for tr in trainers:
                 tr.round = epoch
-                futures.append(executor.submit(tr.opt_step_base_model, rg))
-            for future in as_completed(futures):
+                futures_.append(executor.submit(tr.opt_step_base_model, rg))
+            for future in as_completed(futures_):
                 pass
+            del futures_
 
 
             # test
