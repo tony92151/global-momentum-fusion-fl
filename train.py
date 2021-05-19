@@ -3,7 +3,8 @@ import copy
 import json
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed
+from bounded_pool_executor import BoundedProcessPoolExecutor as ThreadPoolExecutor
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
