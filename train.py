@@ -11,7 +11,7 @@ import torch.optim as optim
 from tqdm import tqdm
 from utils.configer import Configer
 import time, copy
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 
 from globalfusion.warmup import warmup
 from torch.utils.tensorboard import SummaryWriter
@@ -136,6 +136,7 @@ if __name__ == '__main__':
     traffic += get_serialize_size(net) * 4  # 4 clients download
     # train
     print("\nStart training...")
+    executor = ThreadPoolExecutor(max_workers=num_pool)
     for epoch in tqdm(range(config.trainer.get_max_iteration())):
         gs = []
 
@@ -143,10 +144,12 @@ if __name__ == '__main__':
         ####################################################################################################
         if not num_pool == -1:
             # training
-            executor = ThreadPoolExecutor(max_workers=num_pool)
+            futures = []
             for tr in trainers:
-                _ = executor.submit(tr.train_run, epoch)
-            executor.shutdown(True)
+                futures.append(executor.submit(tr.train_run, epoch))
+            for future in as_completed(futures):
+                pass
+
             for tr in trainers:
                 gs.append(tr.last_gradient)
 
@@ -158,17 +161,19 @@ if __name__ == '__main__':
             rg = aggregater(gs, device=torch.device("cuda:0"), aggrete_bn=False)
 
             # one-step update
-            executor = ThreadPoolExecutor(max_workers=num_pool)
+            futures = []
             for tr in trainers:
                 tr.round = epoch
-                _ = executor.submit(tr.opt_step_base_model, rg)
-            executor.shutdown(True)
+                futures.append(executor.submit(tr.opt_step_base_model, rg))
+            for future in as_completed(futures):
+                pass
+
 
             # test
             test_acc = []
             test_loss = []
             ev.round = epoch
-            executor = ThreadPoolExecutor(max_workers=num_pool)
+            # executor = ThreadPoolExecutor(max_workers=num_pool)
             result = executor.map(ev.eval_run, [copy.deepcopy(tr.last_model) for tr in trainers])
             for acc, loss in result:
                 test_acc.append(acc)
@@ -202,6 +207,7 @@ if __name__ == '__main__':
         writer.add_scalar("test acc", test_acc, global_step=epoch, walltime=None)
         writer.add_scalar("traffic(MB)", traffic, global_step=epoch, walltime=None)
 
+    executor.shutdown(True)
     # save result
     result_path = os.path.join(out_path, "result.json")
     if not os.path.isfile(result_path):
