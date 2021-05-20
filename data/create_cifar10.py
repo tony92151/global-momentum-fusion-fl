@@ -103,7 +103,7 @@ if __name__ == '__main__':
 
     ############################################################
     # Total 50000 images
-    num_shards, num_imgs = 40, 1250
+    num_shards, num_imgs = 100, 500
     idx_shard = [i for i in range(num_shards)]
     ############################################################
     datas = []

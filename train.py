@@ -4,7 +4,7 @@ import json
 import os
 import time
 from concurrent.futures import as_completed
-from bounded_pool_executor import BoundedProcessPoolExecutor as ThreadPoolExecutor
+from bounded_pool_executor import BoundedThreadPoolExecutor as ThreadPoolExecutor
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -136,7 +136,8 @@ if __name__ == '__main__':
     traffic += get_serialize_size(net) * 4  # 4 clients download
     # train
     print("\nStart training...")
-    executor = ThreadPoolExecutor(max_workers=num_pool)
+    if not num_pool == -1:
+        executor = ThreadPoolExecutor(max_workers=num_pool)
     for epoch in tqdm(range(config.trainer.get_max_iteration())):
         gs = []
 
@@ -209,7 +210,8 @@ if __name__ == '__main__':
         writer.add_scalar("test acc", test_acc, global_step=epoch, walltime=None)
         writer.add_scalar("traffic(MB)", traffic, global_step=epoch, walltime=None)
 
-    executor.shutdown(True)
+    if not num_pool == -1:
+        executor.shutdown(True)
     # save result
     result_path = os.path.join(out_path, "result.json")
     if not os.path.isfile(result_path):

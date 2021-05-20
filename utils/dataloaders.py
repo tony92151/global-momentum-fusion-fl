@@ -10,7 +10,7 @@ from torch.utils.data import SubsetRandomSampler
 import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.json", batch_size=128):
+def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.json", batch_size=128, show=True):
     transform_test = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
@@ -44,6 +44,13 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
 
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                              shuffle=True, num_workers=2)
+
+    if show:
+        for j in range(len(context.keys())):
+            ans = [0 for i in range(10)]
+            for i in context[str(j)]: 
+                ans[trainset.targets[i]] +=1
+                print("client: {} , {}, sum: {}".format(j, ans, sum(ans)))
 
     return {"test": testloader, "train_s": trainloaders, "train": trainloader}
 
