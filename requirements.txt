@@ -2,12 +2,12 @@ torch~=1.7.1
 torchvision~=0.8.2
 multiprocess
 ipfshttpclient==0.7.0
-pandas~=1.2.0
+pandas~=1.1.0
 flask
 tqdm~=4.42.1
 matplotlib~=3.3.4
 
 numpy~=1.19.1
 pillow~=7.2.0
-
+tensorboard==2.5.0
 bounded-pool-executor==0.0.3

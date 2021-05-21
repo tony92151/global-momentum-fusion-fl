@@ -1,5 +1,5 @@
 # small_dgc_cr1_iid
-python3 train.py --config ./configs/cifar10/config_0.ini --output ./save/cifar10_test
+python3 train.py --config ./configs/cifar10/config_0.ini --output ./save/cifar10_test --pool 5 --gpu 0
 sleep 30
 # small_dgc_cr1_niid
 python3 train.py --config ./configs/cifar10/config_1.ini --output ./save/cifar10_test
