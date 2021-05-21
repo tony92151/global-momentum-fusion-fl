@@ -8,7 +8,9 @@ from torch.utils.data import DataLoader, TensorDataset, Dataset
 import numpy as np
 from torch.utils.data import SubsetRandomSampler
 import torch.multiprocessing
+
 torch.multiprocessing.set_sharing_strategy('file_system')
+
 
 def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.json", batch_size=128, show=True):
     transform_test = transforms.Compose([
@@ -48,9 +50,9 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     if show:
         for j in range(len(context.keys())):
             ans = [0 for i in range(10)]
-            for i in context[str(j)]: 
-                ans[trainset.targets[i]] +=1
-                print("client: {} , {}, sum: {}".format(j, ans, sum(ans)))
+            for i in context[str(j)]:
+                ans[trainset.targets[i]] += 1
+            print("client: {} , {}, sum: {}".format(j, ans, sum(ans)))
 
     return {"test": testloader, "train_s": trainloaders, "train": trainloader}
 
@@ -95,16 +97,16 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
         train_data_all_y += train_data["user_data"][i]["y"]
         train_idx.append(len(train_data["user_data"][i]["y"]))
 
-    train_dataset = MNISTDataset(torch.tensor(train_data_all_x).view(-1, 28, 28), 
+    train_dataset = MNISTDataset(torch.tensor(train_data_all_x).view(-1, 28, 28),
                                  torch.tensor(train_data_all_y), transform=data_transform)
 
     train_idx = len_to_index(train_idx)
     trainloaders = [torch.utils.data.DataLoader(
-                            train_dataset,
-                            batch_size=batch_size,
-                            num_workers=2,
-                            sampler=SubsetRandomSampler(train_idx[i]))
-                    for i in range(len(train_idx))]
+        train_dataset,
+        batch_size=batch_size,
+        num_workers=2,
+        sampler=SubsetRandomSampler(train_idx[i]))
+        for i in range(len(train_idx))]
 
     trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, num_workers=2, shuffle=True)
     #############################################################################
@@ -116,16 +118,16 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
         test_data_all_y += test_data["user_data"][i]["y"]
         test_idx.append(len(test_data["user_data"][i]["y"]))
 
-    test_dataset = MNISTDataset(torch.tensor(test_data_all_x).view(-1, 28, 28), 
-                                 torch.tensor(test_data_all_y), transform=data_transform)
+    test_dataset = MNISTDataset(torch.tensor(test_data_all_x).view(-1, 28, 28),
+                                torch.tensor(test_data_all_y), transform=data_transform)
 
     test_idx = len_to_index(test_idx)
     testloaders = [torch.utils.data.DataLoader(
-                            test_dataset,
-                            batch_size=batch_size,
-                            num_workers=2,
-                            sampler=SubsetRandomSampler(test_idx[i]))
-                    for i in range(len(test_idx))]
+        test_dataset,
+        batch_size=batch_size,
+        num_workers=2,
+        sampler=SubsetRandomSampler(test_idx[i]))
+        for i in range(len(test_idx))]
 
     testloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, num_workers=2, shuffle=True)
 
@@ -133,9 +135,10 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     # train: single loader
     # train_s: loaders
     # test_s: loaders
-    return {"test": testloader, "train_s": trainloaders, 
+    return {"test": testloader, "train_s": trainloaders,
             "test_s": testloaders, "train": trainloader}
     # return {"test": copy.deepcopy(testloader), "train": copy.deepcopy(trainloader)}
+
 
 def len_to_index(train_idx):
     l = list(range(sum(train_idx)))

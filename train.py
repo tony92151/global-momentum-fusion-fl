@@ -177,10 +177,12 @@ if __name__ == '__main__':
             test_loss = []
             ev.round = epoch
             # executor = ThreadPoolExecutor(max_workers=num_pool)
-            result = executor.map(ev.eval_run, [copy.deepcopy(tr.last_model) for tr in trainers])
+            evl_models = [copy.deepcopy(tr.last_model) for tr in trainers]
+            result = executor.map(ev.eval_run, evl_models)
             for acc, loss in result:
                 test_acc.append(acc)
                 test_loss.append(loss)
+            del evl_models
         ####################################################################################################
         else:
             for i, tr in zip(range(len(trainers)), trainers):

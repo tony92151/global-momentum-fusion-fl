@@ -104,7 +104,9 @@ class trainer:
         self.training_loss = eploss
         self.print_("trainer >> cid: {} >> done, {}".format(self.cid, time.time()))
         self.last_state = optimizer.get_state()
-        return copy.deepcopy(model)
+        del optimizer
+        del model
+        # return copy.deepcopy(model)
 
     def opt_step_base_model(self, base_gradient=None, round_=None, base_model=None):
         if base_model is None:
