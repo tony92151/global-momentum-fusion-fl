@@ -129,7 +129,8 @@ if __name__ == '__main__':
         tr.set_mdoel(net)
 
     # Init trainers evaluater
-    ev = evaluater(config=config, dataloader=dataloaders["test"], device=torch.device("cuda:0"), writer=None)
+    ev = evaluater(config=config, dataloader=dataloaders["test"], device=torch.device("cuda:{}".format(gpus[0])),
+                   writer=None)
 
     # inint traffic simulator
     traffic = 0
@@ -156,11 +157,13 @@ if __name__ == '__main__':
                 gs.append(tr.last_gradient)
 
             # decompress
+            result = executor.map(decompress, [gs[i]["gradient"] for i in range(len(gs))])
+            result = [i for i in result]
             for i in range(len(gs)):
-                gs[i]["gradient"] = decompress(gs[i]["gradient"], device=torch.device("cuda:0"))
+                gs[i]["gradient"] = result[i]
 
             # aggregate
-            rg = aggregater(gs, device=torch.device("cuda:0"), aggrete_bn=False)
+            rg = aggregater(gs, device=torch.device("cuda:{}".format(gpus[0])), aggrete_bn=False)
 
             # one-step update
             futures_ = []
