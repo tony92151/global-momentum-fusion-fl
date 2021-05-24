@@ -106,6 +106,7 @@ class trainer:
         self.last_state = optimizer.get_state()
         del optimizer
         del model
+        return
         # return copy.deepcopy(model)
 
     def opt_step_base_model(self, base_gradient=None, round_=None, base_model=None):
@@ -133,4 +134,4 @@ class trainer:
                     idx += 3
         self.last_model = copy.deepcopy(model)
         self.last_de_gradient = copy.deepcopy(base_gradient)
-        return copy.deepcopy(model)
+        return
