@@ -2,8 +2,14 @@ class config_dgc:
     def __init__(self, config):
         self.config = dict(config._sections["dgc"])
 
-    def get_compress_ratio(self) -> float:
-        return float(self.config["compress_ratio"])
+    def get_compress_ratio(self) -> list:
+        cr = self.config["compress_ratio"]
+        if cr[0] == "[" and cr[-1] == "]":
+            cr = cr[1:-1].split(",")
+            cr = [float(i) for i in cr]
+        else:
+            cr = [float(cr)]
+        return cr
 
     def get_momentum(self) -> float:
         return float(self.config["momentum"])

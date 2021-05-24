@@ -54,6 +54,9 @@ class trainer:
 
         lr = self.warmup.get_lr_from_step(round_)
         model.train().to(self.device)
+        cr = self.config.dgc.get_compress_ratio()[
+            int((self.config.trainer.get_end_step() - self.config.trainer.get_base_step()) /
+                len(self.config.dgc.get_compress_ratio()))]
         optimizer = GFDGCSGD(params=model.parameters(),
                              lr=lr,
                              momentum=0.9,
@@ -61,7 +64,7 @@ class trainer:
                              weight_decay=1e-4,
                              nesterov=True,
                              dgc_momentum=self.config.dgc.get_momentum(),
-                             compress_ratio=self.config.dgc.get_compress_ratio(),
+                             compress_ratio=cr,
                              fusing_ratio=self.config.gf.get_fusing_ratio(),
                              checkpoint=False,
                              device=self.device,

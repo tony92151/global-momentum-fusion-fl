@@ -8,7 +8,7 @@ torch.multiprocessing.set_start_method('spawn', force=True)
 def normalize(value, device=torch.device("cpu")):
     new_value = []
     for t in value:
-        t.to(device)
+        t = t.to(device)
         t = t.abs()
         t -= t.min()
         t /= t.max()
