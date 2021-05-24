@@ -215,6 +215,9 @@ if __name__ == '__main__':
         writer.add_scalar("test acc", test_acc, global_step=epoch, walltime=None)
         writer.add_scalar("traffic(MB)", traffic, global_step=epoch, walltime=None)
 
+        traffic += get_serialize_size(gs) * 2   # 4 clients upload and aggregator download download
+        traffic += get_serialize_size(rg) * 4   # 4 clients download
+
     if not num_pool == -1:
         executor.shutdown(True)
     # save result
