@@ -54,9 +54,9 @@ class trainer:
 
         lr = self.warmup.get_lr_from_step(round_)
         model.train().to(self.device)
-        cr = self.config.dgc.get_compress_ratio()[
-            int((self.config.trainer.get_end_step() - self.config.trainer.get_base_step()) /
-                len(self.config.dgc.get_compress_ratio()))]
+        chunk = (self.config.trainer.get_end_step() - self.config.trainer.get_base_step()) / len(
+            self.config.dgc.get_compress_ratio())
+        cr = self.config.dgc.get_compress_ratio()[int(round_ / chunk)]
         optimizer = GFDGCSGD(params=model.parameters(),
                              lr=lr,
                              momentum=0.9,
