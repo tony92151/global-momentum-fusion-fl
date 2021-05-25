@@ -29,6 +29,7 @@ def init_writer(tbpath):
     os.makedirs(tbpath, exist_ok=True)
     writer = SummaryWriter(tbpath)
     print("$ tensorboard --logdir={} --port 8123 --host 0.0.0.0 \n".format(os.path.dirname(tbpath)))
+    print("\nName: {}".format(tbpath.split("/")[-1]))
     return writer
 
 
@@ -42,6 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--output', help="output", type=str, default=None)
     parser.add_argument('--pool', help="Multiprocess Worker Pools", type=str, default="-1")
     parser.add_argument('--gpu', help="GPU usagre. ex: 0,1,2", type=str, default="0")
+    parser.add_argument('--baseline', help="baseline single trainer training,", type=bool, default=False)
     args = parser.parse_args()
 
     if args.config is None or args.output is None:
@@ -57,6 +59,8 @@ if __name__ == '__main__':
         raise ("GPU unavailable.")
     else:
         print("\nGPU uasge: {}".format(gpus))
+
+    baseline = args.baseline
 
     print("Read cinfig at : {}".format(con_path))
     config = Configer(con_path)
@@ -96,16 +100,28 @@ if __name__ == '__main__':
     print("Total test images: {}".format(len(dataloaders["test"].dataset)))
 
     # Init trainers
-    print("\nInit trainers...")
-    print("Nodes: {}".format(config.general.get_nodes()))
-    trainers = []
-    for i in tqdm(range(config.general.get_nodes())):
-        trainers.append(trainer(config=config,
-                                device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
-                                dataloader=dataloaders["train_s"][i],
-                                cid=i,
-                                writer=writer,
-                                warmup=w))
+    if not baseline:
+        print("\nInit trainers...")
+        print("Nodes: {}".format(config.general.get_nodes()))
+        trainers = []
+        for i in tqdm(range(config.general.get_nodes())):
+            trainers.append(trainer(config=config,
+                                    device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
+                                    dataloader=dataloaders["train_s"][i],
+                                    cid=i,
+                                    writer=writer,
+                                    warmup=w))
+    else:
+        print("\nInit baseline trainer...")
+        print("Nodes: {}".format(config.general.get_nodes()))
+        trainers = []
+        for i in tqdm(range(1)):
+            trainers.append(trainer(config=config,
+                                    device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
+                                    dataloader=dataloaders["train"],
+                                    cid=i,
+                                    writer=writer,
+                                    warmup=w))
 
     # net = Net()
     model_table = {
