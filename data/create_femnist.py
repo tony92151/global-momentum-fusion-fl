@@ -12,7 +12,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     path = os.path.abspath(args.data)
-    number_of_client = args.n
 
     train_list = glob.glob(os.path.join(path, "train", "all_data_*.json"))
     test_list = glob.glob(os.path.join(path, "test", "all_data_*.json"))
