@@ -83,11 +83,14 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     train_data = torch.load(os.path.join(root, "train_data.pt"))
     test_data = torch.load(os.path.join(root, "test_data.pt"))
 
+    if clients > len(train_data['users']):
+        raise ValueError("Request clients({}) larger then dataset provide({}).".format(clients, len(train_data['users'])))
+
     train_data['users'] = train_data['users'][:clients]
     test_data['users'] = test_data['users'][:clients]
 
-    train_data_ = copy.deepcopy(train_data)
-    test_data_ = copy.deepcopy(test_data)
+    # train_data_ = copy.deepcopy(train_data)
+    # test_data_ = copy.deepcopy(test_data)
     #############################################################################
     train_data_all_x = []
     train_data_all_y = []

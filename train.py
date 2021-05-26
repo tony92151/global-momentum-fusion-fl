@@ -42,7 +42,7 @@ if __name__ == '__main__':
     parser.add_argument('--config', help="path to config", type=str, default=None)
     parser.add_argument('--output', help="output", type=str, default=None)
     parser.add_argument('--pool', help="Multiprocess Worker Pools", type=str, default="-1")
-    parser.add_argument('--gpu', help="GPU usagre. ex: 0,1,2", type=str, default="0")
+    parser.add_argument('--gpu', help="GPU usage. ex: 0,1,2", type=str, default="0")
     parser.add_argument('--baseline', help="baseline single trainer training,", type=bool, default=False)
     args = parser.parse_args()
 
@@ -56,9 +56,9 @@ if __name__ == '__main__':
 
     gpus = [int(i) for i in args.gpu.split(",")]
     if len(gpus) > torch.cuda.device_count() or max(gpus) > torch.cuda.device_count():
-        raise ("GPU unavailable.")
+        raise ValueError("GPU unavailable.")
     else:
-        print("\nGPU uasge: {}".format(gpus))
+        print("\nGPU usage: {}".format(gpus))
 
     baseline = args.baseline
 
