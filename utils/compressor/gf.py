@@ -2,7 +2,15 @@ class config_gf:
     def __init__(self, config):
         self.config = dict(config._sections["gf"])
 
-    def get_fusing_ratio(self) -> float:
+    def get_fusing_ratio(self) -> list:
+        fr = self.config["fusing_ratio"]
+        if fr[0] == "[" and fr[-1] == "]":
+            fr = fr[1:-1].split(",")
+            fr = [float(i) for i in fr]
+        else:
+            fr = [float(fr)]
+        return fr
+
         return float(self.config["fusing_ratio"])
 
     def get_global_fusion(self) -> bool:

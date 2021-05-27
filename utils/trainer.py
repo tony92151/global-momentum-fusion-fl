@@ -57,8 +57,10 @@ class trainer:
         model.train().to(self.device)
         chunk = self.config.trainer.get_max_iteration() / len(self.config.dgc.get_compress_ratio())
         cr = self.config.dgc.get_compress_ratio()[min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
+        fr = self.config.gf.get_fusing_ratio()[min(len(self.config.gf.get_fusing_ratio()), int(round_ / chunk))]
         if self.cid == 0 and self.writer is not None:
             self.writer.add_scalar("Compress ratio", cr, global_step=round_, walltime=None)
+            self.writer.add_scalar("Fusion ratio", fr, global_step=round_, walltime=None)
         optimizer = GFDGCSGD(params=model.parameters(),
                              lr=lr,
                              momentum=0.9,
@@ -67,7 +69,7 @@ class trainer:
                              nesterov=True,
                              dgc_momentum=self.config.dgc.get_momentum(),
                              compress_ratio=cr,
-                             fusing_ratio=self.config.gf.get_fusing_ratio(),
+                             fusing_ratio=fr,
                              checkpoint=False,
                              device=self.device,
                              pool=None)
