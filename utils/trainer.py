@@ -56,6 +56,8 @@ class trainer:
         model.train().to(self.device)
         chunk = self.config.trainer.get_max_iteration() / len(self.config.dgc.get_compress_ratio())
         cr = self.config.dgc.get_compress_ratio()[min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
+        if self.cid == 0 and self.writer is not None:
+            self.writer.add_scalar("Compress ratio", cr, global_step=round_, walltime=None)
         optimizer = GFDGCSGD(params=model.parameters(),
                              lr=lr,
                              momentum=0.9,
