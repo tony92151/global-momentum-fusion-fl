@@ -172,6 +172,8 @@ if __name__ == '__main__':
             for tr in trainers:
                 gs.append(tr.last_gradient)
 
+            traffic += get_serialize_size(gs) * 2  # 4 clients upload and aggregator download download
+
             # decompress
             result = executor.map(decompress, [gs[i]["gradient"] for i in range(len(gs))])
             result = [i for i in result]
@@ -190,7 +192,6 @@ if __name__ == '__main__':
                 pass
             del futures_
 
-
             # test
             test_acc = []
             test_loss = []
@@ -207,6 +208,8 @@ if __name__ == '__main__':
             for i, tr in zip(range(len(trainers)), trainers):
                 _ = tr.train_run(round_=epoch)
                 gs.append(tr.last_gradient)
+
+            traffic += get_serialize_size(gs) * 2  # 4 clients upload and aggregator download download
 
             for i in range(len(gs)):
                 gs[i]["gradient"] = decompress(gs[i]["gradient"], device=torch.device("cuda:0"))
@@ -231,7 +234,6 @@ if __name__ == '__main__':
         writer.add_scalar("test acc", test_acc, global_step=epoch, walltime=None)
         writer.add_scalar("traffic(MB)", traffic, global_step=epoch, walltime=None)
 
-        traffic += get_serialize_size(gs) * 2   # 4 clients upload and aggregator download download
         traffic += get_serialize_size(rg) * 4   # 4 clients download
 
     if not num_pool == -1:

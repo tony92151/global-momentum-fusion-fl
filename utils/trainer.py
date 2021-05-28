@@ -56,7 +56,7 @@ class trainer:
         lr = self.warmup.get_lr_from_step(round_)
         model.train().to(self.device)
         chunk = self.config.trainer.get_max_iteration() / len(self.config.dgc.get_compress_ratio())
-        chunk_ = self.config.trainer.get_max_iteration() / len(self.config.dgc.get_fusing_ratio())
+        chunk_ = self.config.trainer.get_max_iteration() / len(self.config.gf.get_fusing_ratio())
         cr = self.config.dgc.get_compress_ratio()[min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
         fr = self.config.gf.get_fusing_ratio()[min(len(self.config.gf.get_fusing_ratio()), int(round_ / chunk_))]
         if self.cid == 0 and self.writer is not None:

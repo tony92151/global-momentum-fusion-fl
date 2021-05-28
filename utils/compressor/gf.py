@@ -11,8 +11,6 @@ class config_gf:
             fr = [float(fr)]
         return fr
 
-        return float(self.config["fusing_ratio"])
-
     def get_global_fusion(self) -> bool:
         if self.config["global_fusion"] == "False":
             return False
