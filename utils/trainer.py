@@ -98,12 +98,17 @@ class trainer:
 
         optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
         self.print_("trainer >> cid: {} >> compress, {}".format(self.cid, time.time()))
-        if not self.config.gf.get_global_fusion() or \
-                (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
-            optimizer.compress(compress=True, momentum_correction=True)
+        ############################################################
+        if self.config.dgc.get_dgc():
+            optimizer.compress(compress=False, momentum_correction=False)
         else:
-            optimizer.compress(global_momentum=self.last_de_gradient["gradient"], compress=True,
-                               momentum_correction=True)
+            if not self.config.gf.get_global_fusion() or \
+                    (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
+                optimizer.compress(compress=True, momentum_correction=True)
+            else:
+                optimizer.compress(global_momentum=self.last_de_gradient["gradient"], compress=True,
+                                   momentum_correction=True)
+        ############################################################
         eploss = sum(eploss) / len(eploss)
         if self.writer is not None:
             self.writer.add_scalar("loss of {}".format(self.cid), eploss, global_step=round_, walltime=None)
@@ -115,7 +120,6 @@ class trainer:
         del optimizer
         del model
         return
-        # return copy.deepcopy(model)
 
     def opt_step_base_model(self, base_gradient=None, round_=None, base_model=None):
         if base_model is None:
@@ -150,4 +154,4 @@ class trainer:
             self.global_momentum = copy.deepcopy(self.last_de_gradient["gradient"])
         else:
             for i in range(len(self.global_momentum)):
-                self.global_momentum[i].mul_(0.9).add_(self.last_de_gradient["gradient"][i])
+                self.global_momentum[i].mul_(0.8).add_(self.last_de_gradient["gradient"][i])

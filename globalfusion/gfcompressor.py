@@ -80,32 +80,34 @@ class GFCCompressor:
             tensor_a = tensor_a[tensor_a > 0]
 
             if not len(tensor_a) == 0:
-                tmin = torch.min(tensor_a)
-                tmax = torch.max(tensor_a)
+                # tmin = torch.min(tensor_a)
+                # tmax = torch.max(tensor_a)
+                pass
             else:
                 compress = False
 
-            if compress or (self.compress_ratio == 1):
-                if not len(tensor_a) == 0:
-                    for i in range(10):
-                        thr = (tmax + tmin) / 2
-                        mask = tensor.abs().to(self.device) >= thr.to(self.device)
-                        selected = mask.sum()
+            if self.compress_ratio == 1:
+                compress = False
 
-                        if selected > (tensor_a.numel() * min(self.compress_ratio + 0.05, 1)):
-                            tmin = thr
-                            continue
-                        if selected < (tensor_a.numel() * max(self.compress_ratio - 0.05, 0.01)):
-                            tmax = thr
-                            continue
-                        break
-                else:
-                    thr = torch.tensor(1)  # becauce all element are 0, set thr=1 make mask mask out everything
-                    mask = tensor.abs().to(self.device) >= thr.to(self.device)
-                    selected = mask.sum()
+            if compress:
+                # for i in range(10):
+                #     thr = (tmax + tmin) / 2
+                #     mask = tensor.abs().to(self.device) >= thr.to(self.device)
+                #     selected = mask.sum()
+                #
+                #     if selected > (tensor_a.numel() * min(self.compress_ratio + 0.05, 1)):
+                #         tmin = thr
+                #         continue
+                #     if selected < (tensor_a.numel() * max(self.compress_ratio - 0.05, 0.01)):
+                #         tmax = thr
+                #         continue
+                #     break
+                cr = max(0.0, min(1.0, self.compress_ratio))
+                thr = torch.min(torch.topk(tensor_a.abs(), max(1, int(tensor_a.numel() * cr)),
+                                           largest=True, sorted=False)[0])
+                mask = tensor.abs().to(self.device) >= thr.to(self.device)
             else:
                 mask = tensor.abs().to(self.device) > 0
-                # selected = mask.sum()
 
             indices, = torch.where(mask)
             values = tensor[indices]
