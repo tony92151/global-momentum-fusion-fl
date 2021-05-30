@@ -100,14 +100,14 @@ class trainer:
         self.print_("trainer >> cid: {} >> compress, {}".format(self.cid, time.time()))
         ############################################################
         if self.config.dgc.get_dgc():
-            optimizer.compress(compress=False, momentum_correction=False)
-        else:
             if not self.config.gf.get_global_fusion() or \
                     (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
                 optimizer.compress(compress=True, momentum_correction=True)
             else:
                 optimizer.compress(global_momentum=self.last_de_gradient["gradient"], compress=True,
                                    momentum_correction=True)
+        else:
+            optimizer.compress(compress=False, momentum_correction=False)
         ############################################################
         eploss = sum(eploss) / len(eploss)
         if self.writer is not None:
