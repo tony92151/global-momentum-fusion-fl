@@ -104,7 +104,7 @@ class trainer:
                     (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
                 optimizer.compress(compress=True, momentum_correction=True)
             else:
-                optimizer.compress(global_momentum=self.last_de_gradient["gradient"], compress=True,
+                optimizer.compress(global_momentum=self.global_momentum["gradient"], compress=True,
                                    momentum_correction=True)
         else:
             optimizer.compress(compress=False, momentum_correction=False)
