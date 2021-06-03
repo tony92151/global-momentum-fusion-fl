@@ -1,5 +1,6 @@
 import json
 import os, copy
+import random
 import torch
 from torch import tensor
 import torchvision
@@ -84,7 +85,8 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     test_data = torch.load(os.path.join(root, "test_data.pt"))
 
     if clients > len(train_data['users']):
-        raise ValueError("Request clients({}) larger then dataset provide({}).".format(clients, len(train_data['users'])))
+        raise ValueError(
+            "Request clients({}) larger then dataset provide({}).".format(clients, len(train_data['users'])))
 
     train_data['users'] = train_data['users'][:clients]
     test_data['users'] = test_data['users'][:clients]
@@ -134,12 +136,27 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
 
     testloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, num_workers=2, shuffle=True)
 
+    # iid dataloaders
+    idx = list(range(len(train_data_all_x)))
+    random.shuffle(idx)
+    new_train_data_all_x = [train_data_all_x[i] for i in idx]
+    new_train_data_all_y = [train_data_all_y[i] for i in idx]
+    train_dataset_iid = MNISTDataset(torch.tensor(new_train_data_all_x).view(-1, 28, 28),
+                                     torch.tensor(new_train_data_all_y), transform=data_transform)
+    trainloaders_iid = [torch.utils.data.DataLoader(
+        train_dataset_iid,
+        batch_size=batch_size,
+        num_workers=2,
+        sampler=SubsetRandomSampler(train_idx[i]))
+        for i in range(len(train_idx))]
+
     # test: single loader
     # train: single loader
     # train_s: loaders
     # test_s: loaders
     return {"test": testloader, "train_s": trainloaders,
-            "test_s": testloaders, "train": trainloader}
+            "test_s": testloaders, "train": trainloader,
+            "train_s_iid": trainloaders_iid}
     # return {"test": copy.deepcopy(testloader), "train": copy.deepcopy(trainloader)}
 
 

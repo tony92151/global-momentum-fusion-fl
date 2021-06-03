@@ -108,6 +108,7 @@ if __name__ == '__main__':
             trainers.append(trainer(config=config,
                                     device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
                                     dataloader=dataloaders["train_s"][i],
+                                    dataloader_iid=dataloaders["train_s_iid"][i],
                                     cid=i,
                                     writer=writer,
                                     warmup=w))
