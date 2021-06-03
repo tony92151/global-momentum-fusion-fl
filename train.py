@@ -237,6 +237,16 @@ if __name__ == '__main__':
 
         traffic += get_serialize_size(rg) * 4   # 4 clients download
 
+        l = 0.0
+        ls = []
+        for k in list(trainers[0].weight_divergence.keys()):
+            l= [tr.weight_divergence[k] for tr in trainers]
+            l = sum(l)/len(l)
+            ls.append(l)
+            writer.add_scalar("wdv client_avg layer {}".format(k), l, global_step=epoch, walltime=None)
+
+        writer.add_scalar("wdv client_avg", sum(ls)/len(ls), global_step=epoch, walltime=None)
+
     if not num_pool == -1:
         executor.shutdown(True)
     # save result

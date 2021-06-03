@@ -198,15 +198,22 @@ class trainer:
         iid_last_gradient = copy.deepcopy(optimizer.get_compressed_gradient())
         d_iid = optimizer.decompress(iid_last_gradient["gradient"])
         d_niid = optimizer.decompress(self.last_gradient["gradient"])
+        if not cr == 1.0:
+            print("mask wdv")
+            for t in range(len(d_niid)):
+                _, ctx = iid_last_gradient["gradient"][t]
+                shape, mask, _ = ctx
+                mask = torch.tensor(mask).view(shape)
+                d_niid[t].mul_(mask.float())
         dvs = []
         for i in range(len(d_iid)):
             dv = torch.norm(torch.add(d_iid[i], d_niid[i], alpha=-1.0)) / torch.norm(d_niid[i])
             dvs.append(dv)
             self.weight_divergence[list(self.weight_divergence.keys())[i]] = dv
-            self.writer.add_scalar("wdv layer {}".format(list(self.weight_divergence.keys())[i])
+            self.writer.add_scalar("{} wdv layer {}".format(self.cid, list(self.weight_divergence.keys())[i])
                                    , dv, global_step=round_, walltime=None)
         dvs = sum(dvs)/len(dvs)
-        self.writer.add_scalar("wdv avg", dvs, global_step=round_, walltime=None)
+        self.writer.add_scalar("{} wdv avg".format(self.cid), dvs, global_step=round_, walltime=None)
 
     def opt_step_base_model(self, base_gradient=None, round_=None, base_model=None):
         if base_model is None:
