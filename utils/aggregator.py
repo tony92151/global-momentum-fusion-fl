@@ -34,9 +34,10 @@ def add_mean_var(means=None, vrs=None, tracks=None):
 
 def aggregater(gradient_list, device=torch.device("cpu"), aggrete_bn=False):
     agg_gradient = []
+    all_steps = sum([j["step_count"] for j in gradient_list])
     for i in range(len(gradient_list[0]["gradient"])):
-        result = torch.sum(torch.stack([j["gradient"][i].to(device) for j in gradient_list]), dim=0)
-        agg_gradient.append(result / len(gradient_list))
+        result = torch.sum(torch.stack([j["gradient"][i].mul_(j["step_count"]).to(device) for j in gradient_list]), dim=0)
+        agg_gradient.append(result.mul_(1.0/all_steps))
 
     if 'bn' in gradient_list[0].keys() and aggrete_bn:
         bn_result = []

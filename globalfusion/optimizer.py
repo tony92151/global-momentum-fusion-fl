@@ -58,6 +58,7 @@ class GFDGCSGD(torch.optim.Optimizer):
         self.checkpoint = checkpoint
         self.device = device
         self.cid = cid
+        self.step_count = 0
         self.savepath = os.getenv("memory_checkpoint")
 
         self.verbose = False
@@ -181,6 +182,7 @@ class GFDGCSGD(torch.optim.Optimizer):
                 self.memory.mem["bn"][p] = self.memory.mem["bn"][p].tolist()
 
         self.memory.mem["gradient"] = r
+        self.memory.mem["step_count"] = self.step_count
         self.memory.set_compressed_mem(self.memory.mem)
 
     def decompress(self, d):
@@ -262,6 +264,7 @@ class GFDGCSGD(torch.optim.Optimizer):
                     idx += 1
                 p.add_(d_p, alpha=-group['lr'])
 
+        self.step_count += 1
         # self.memory.clean()
         return loss
 
@@ -278,7 +281,7 @@ class GFDGCSGD(torch.optim.Optimizer):
 
 class FGCMemory:
     def __init__(self, momentum=0.9, device=torch.device("cpu")):
-        self.mem = {"gradient": []}
+        self.mem = {"gradient": [], 'step_count': 1}
         self.avg_mem = []
         self.compressed_mem = None
         self.decompressed_mem = None
