@@ -88,8 +88,7 @@ if __name__ == '__main__':
     print("\nInit dataloader...")
     if "cifar10" in config.trainer.get_dataset_path():
         dataloaders = cifar_dataloaders(root=config.trainer.get_dataset_path(),
-                                        index_path=os.path.join(config.trainer.get_dataset_path(),
-                                                                config.trainer.get_dataset_type(), "index.json"),
+                                        index_path=os.path.join(config.trainer.get_dataset_path(), "index.json"),
                                         batch_size=config.trainer.get_local_bs())
     elif "femnist" in config.trainer.get_dataset_path():
         dataloaders = femnist_dataloaders(root=config.trainer.get_dataset_path(),
@@ -107,8 +106,8 @@ if __name__ == '__main__':
         for i in tqdm(range(config.general.get_nodes())):
             trainers.append(trainer(config=config,
                                     device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
-                                    dataloader=dataloaders["train_s"][i],
-                                    dataloader_iid=dataloaders["train_s_iid"][i],
+                                    dataloader=dataloaders["train_s"][i] if config.trainer.get_dataset_type() == "niid"
+                                    else dataloaders["train_s_iid"][i],
                                     cid=i,
                                     writer=writer,
                                     warmup=w))
@@ -228,6 +227,8 @@ if __name__ == '__main__':
                 test_loss.append(loss)
         ####################################################################################################
         ####################################################################################################
+        for tr in trainers:
+            tr.wdv_test(round_=epoch, base_gradient=rg)
 
         test_acc = sum(test_acc) / len(test_acc)
         test_loss = sum(test_loss) / len(test_loss)
@@ -235,17 +236,17 @@ if __name__ == '__main__':
         writer.add_scalar("test acc", test_acc, global_step=epoch, walltime=None)
         writer.add_scalar("traffic(MB)", traffic, global_step=epoch, walltime=None)
 
-        traffic += get_serialize_size(rg) * 4   # 4 clients download
+        traffic += get_serialize_size(rg) * 4  # 4 clients download
 
         l = 0.0
         ls = []
         for k in list(trainers[0].weight_divergence.keys()):
-            l= [tr.weight_divergence[k] for tr in trainers]
-            l = sum(l)/len(l)
+            l = [tr.weight_divergence[k] for tr in trainers]
+            l = sum(l) / len(l)
             ls.append(l)
             writer.add_scalar("wdv client_avg layer {}".format(k), l, global_step=epoch, walltime=None)
 
-        writer.add_scalar("wdv client_avg", sum(ls)/len(ls), global_step=epoch, walltime=None)
+        writer.add_scalar("wdv client_avg", sum(ls) / len(ls), global_step=epoch, walltime=None)
 
     if not num_pool == -1:
         executor.shutdown(True)

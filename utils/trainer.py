@@ -13,18 +13,20 @@ import io, os, json
 import time
 import copy
 import random
+
+from globalfusion.gfcompressor import GFCCompressor
 from globalfusion.optimizer import GFDGCSGD
 from utils.configer import Configer
 
 
 class trainer:
-    def __init__(self, config=None, dataloader=None, dataloader_iid=None, device=torch.device("cpu"), cid=-1, writer=None,
+    def __init__(self, config=None, dataloader=None, device=torch.device("cpu"), cid=-1, writer=None,
                  warmup=None):
         self.config = config
         self.cid = cid
         # self.dataloader = copy.deepcopy(dataloader)
         self.dataloader = dataloader
-        self.dataloader_iid = dataloader_iid
+        # self.dataloader_iid = dataloader_iid
         self.device = device
         self.round = None
         self.last_gradient = None
@@ -125,86 +127,19 @@ class trainer:
         self.print_("trainer >> cid: {} >> done, {}".format(self.cid, time.time()))
         self.last_state = optimizer.get_state()
         #
-        self.train_run_iid(round_)
+        # self.train_run_iid(round_)
         del optimizer
         del model
         return
 
-    def train_run_iid(self, round_, base_model=None):
-        if base_model is None:
-            model = copy.deepcopy(self.last_model)
-        else:
-            model = copy.deepcopy(base_model)
+    def wdv_test(self, round_, agg_gradient=None):
+        if agg_gradient is None:
+            raise ValueError("egg_gradient should not be none.")
+        compresser = GFCCompressor(device=self.device)
+        d_iid = compresser.decompress(self.last_gradient["gradient"])
+        # d_niid = compresser.decompress(agg_gradient["gradient"])
+        d_niid = agg_gradient
 
-        lr = self.warmup.get_lr_from_step(round_)
-        model.train().to(self.device)
-        chunk = self.config.trainer.get_max_iteration() / len(self.config.dgc.get_compress_ratio())
-        chunk_ = self.config.trainer.get_max_iteration() / len(self.config.gf.get_fusing_ratio())
-        cr = self.config.dgc.get_compress_ratio()[min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
-        fr = self.config.gf.get_fusing_ratio()[min(len(self.config.gf.get_fusing_ratio()), int(round_ / chunk_))]
-        if self.cid == 0 and self.writer is not None:
-            self.writer.add_scalar("Compress ratio", cr, global_step=round_, walltime=None)
-            self.writer.add_scalar("Fusion ratio", fr, global_step=round_, walltime=None)
-        optimizer = GFDGCSGD(params=model.parameters(),
-                             lr=lr,
-                             momentum=0.9,
-                             cid=self.cid,
-                             weight_decay=1e-4,
-                             nesterov=True,
-                             dgc_momentum=self.config.dgc.get_momentum(),
-                             compress_ratio=1.0,
-                             fusing_ratio=fr,
-                             checkpoint=False,
-                             device=self.device,
-                             pool=None)
-
-        if self.last_state is not None:
-            optimizer.set_state(self.last_state)
-        # optimizer = torch.optim.SGD(params=model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
-        # optimizer = SGDD(params=model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
-
-        eploss = []
-        self.print_("trainer >> cid: {} >> train start, {}".format(self.cid, time.time()))
-        for i in range(self.config.trainer.get_local_ep()):
-            losses = []
-            for data, target in self.dataloader_iid:
-                data = data.to(self.device)
-                target = target.to(self.device)
-                optimizer.zero_grad()
-                output = model(data.float())
-                loss = self.loss_function(output, target)
-                losses.append(loss.item())
-                loss.backward()
-                optimizer.step()
-            losses = sum(losses) / len(losses)
-            eploss.append(losses)
-
-        optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
-        self.print_("trainer >> cid: {} >> compress, {}".format(self.cid, time.time()))
-        ############################################################
-        if self.config.dgc.get_dgc():
-            if not self.config.gf.get_global_fusion() or \
-                    (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
-                optimizer.compress(compress=True, momentum_correction=True)
-            else:
-                optimizer.compress(global_momentum=self.global_momentum, compress=True,
-                                   momentum_correction=True)
-        else:
-            optimizer.compress(compress=False, momentum_correction=False)
-        ############################################################
-        eploss = sum(eploss) / len(eploss)
-        # if self.writer is not None:
-        #     self.writer.add_scalar("loss of {}".format(self.cid), eploss, global_step=round_, walltime=None)
-        iid_last_gradient = copy.deepcopy(optimizer.get_compressed_gradient())
-        d_iid = optimizer.decompress(iid_last_gradient["gradient"])
-        d_niid = optimizer.decompress(self.last_gradient["gradient"])
-        if not cr == 1.0:
-            print("mask wdv")
-            for t in range(len(d_niid)):
-                _, ctx = iid_last_gradient["gradient"][t]
-                shape, mask, _ = ctx
-                mask = torch.tensor(mask).view(shape)
-                d_niid[t].mul_(mask.float())
         dvs = []
         for i in range(len(d_iid)):
             dv = torch.norm(torch.add(d_iid[i], d_niid[i], alpha=-1.0)) / torch.norm(d_niid[i])
@@ -212,8 +147,93 @@ class trainer:
             self.weight_divergence[list(self.weight_divergence.keys())[i]] = dv
             self.writer.add_scalar("{} wdv layer {}".format(self.cid, list(self.weight_divergence.keys())[i])
                                    , dv, global_step=round_, walltime=None)
-        dvs = sum(dvs)/len(dvs)
+        dvs = sum(dvs) / len(dvs)
         self.writer.add_scalar("{} wdv avg".format(self.cid), dvs, global_step=round_, walltime=None)
+
+    # def train_run_iid(self, round_, base_model=None):
+    #     if base_model is None:
+    #         model = copy.deepcopy(self.last_model)
+    #     else:
+    #         model = copy.deepcopy(base_model)
+    #
+    #     lr = self.warmup.get_lr_from_step(round_)
+    #     model.train().to(self.device)
+    #     chunk = self.config.trainer.get_max_iteration() / len(self.config.dgc.get_compress_ratio())
+    #     chunk_ = self.config.trainer.get_max_iteration() / len(self.config.gf.get_fusing_ratio())
+    #     cr = self.config.dgc.get_compress_ratio()[min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
+    #     fr = self.config.gf.get_fusing_ratio()[min(len(self.config.gf.get_fusing_ratio()), int(round_ / chunk_))]
+    #     if self.cid == 0 and self.writer is not None:
+    #         self.writer.add_scalar("Compress ratio", cr, global_step=round_, walltime=None)
+    #         self.writer.add_scalar("Fusion ratio", fr, global_step=round_, walltime=None)
+    #     optimizer = GFDGCSGD(params=model.parameters(),
+    #                          lr=lr,
+    #                          momentum=0.9,
+    #                          cid=self.cid,
+    #                          weight_decay=1e-4,
+    #                          nesterov=True,
+    #                          dgc_momentum=self.config.dgc.get_momentum(),
+    #                          compress_ratio=1.0,
+    #                          fusing_ratio=fr,
+    #                          checkpoint=False,
+    #                          device=self.device,
+    #                          pool=None)
+    #
+    #     if self.last_state is not None:
+    #         optimizer.set_state(self.last_state)
+    #     # optimizer = torch.optim.SGD(params=model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
+    #     # optimizer = SGDD(params=model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4, nesterov=True)
+    #
+    #     eploss = []
+    #     self.print_("trainer >> cid: {} >> train start, {}".format(self.cid, time.time()))
+    #     for i in range(self.config.trainer.get_local_ep()):
+    #         losses = []
+    #         for data, target in self.dataloader_iid:
+    #             data = data.to(self.device)
+    #             target = target.to(self.device)
+    #             optimizer.zero_grad()
+    #             output = model(data.float())
+    #             loss = self.loss_function(output, target)
+    #             losses.append(loss.item())
+    #             loss.backward()
+    #             optimizer.step()
+    #         losses = sum(losses) / len(losses)
+    #         eploss.append(losses)
+    #
+    #     optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
+    #     self.print_("trainer >> cid: {} >> compress, {}".format(self.cid, time.time()))
+    #     ############################################################
+    #     if self.config.dgc.get_dgc():
+    #         if not self.config.gf.get_global_fusion() or \
+    #                 (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
+    #             optimizer.compress(compress=True, momentum_correction=True)
+    #         else:
+    #             optimizer.compress(global_momentum=self.global_momentum, compress=True,
+    #                                momentum_correction=True)
+    #     else:
+    #         optimizer.compress(compress=False, momentum_correction=False)
+    #     ############################################################
+    #     eploss = sum(eploss) / len(eploss)
+    #     # if self.writer is not None:
+    #     #     self.writer.add_scalar("loss of {}".format(self.cid), eploss, global_step=round_, walltime=None)
+    #     iid_last_gradient = copy.deepcopy(optimizer.get_compressed_gradient())
+    #     d_iid = optimizer.decompress(iid_last_gradient["gradient"])
+    #     d_niid = optimizer.decompress(self.last_gradient["gradient"])
+    #     if not cr == 1.0:
+    #         print("mask wdv")
+    #         for t in range(len(d_niid)):
+    #             _, ctx = iid_last_gradient["gradient"][t]
+    #             shape, mask, _ = ctx
+    #             mask = torch.tensor(mask).view(shape)
+    #             d_niid[t].mul_(mask.float())
+    #     dvs = []
+    #     for i in range(len(d_iid)):
+    #         dv = torch.norm(torch.add(d_iid[i], d_niid[i], alpha=-1.0)) / torch.norm(d_niid[i])
+    #         dvs.append(dv)
+    #         self.weight_divergence[list(self.weight_divergence.keys())[i]] = dv
+    #         self.writer.add_scalar("{} wdv layer {}".format(self.cid, list(self.weight_divergence.keys())[i])
+    #                                , dv, global_step=round_, walltime=None)
+    #     dvs = sum(dvs)/len(dvs)
+    #     self.writer.add_scalar("{} wdv avg".format(self.cid), dvs, global_step=round_, walltime=None)
 
     def opt_step_base_model(self, base_gradient=None, round_=None, base_model=None):
         if base_model is None:
