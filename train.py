@@ -103,11 +103,17 @@ if __name__ == '__main__':
         print("\nInit trainers...")
         print("Nodes: {}".format(config.general.get_nodes()))
         trainers = []
+        if config.trainer.get_dataset_type() == "niid":
+            train_d = dataloaders["train_s"]
+            print("\nUse non-iid dataloader...")
+        else:
+            train_d = dataloaders["train_s_iid"]
+            print("\nUse iid dataloader...")
         for i in tqdm(range(config.general.get_nodes())):
             trainers.append(trainer(config=config,
                                     device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
-                                    dataloader=dataloaders["train_s"][i] if config.trainer.get_dataset_type() == "niid"
-                                    else dataloaders["train_s_iid"][i],
+                                    dataloader=train_d[i],
+                                    dataloader_iid=dataloaders["train_s_iid"],
                                     cid=i,
                                     writer=writer,
                                     warmup=w))
@@ -228,7 +234,7 @@ if __name__ == '__main__':
         ####################################################################################################
         ####################################################################################################
         for tr in trainers:
-            tr.wdv_test(round_=epoch, base_gradient=rg)
+            tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=rg, compare_with_iid_data=False)
 
         test_acc = sum(test_acc) / len(test_acc)
         test_loss = sum(test_loss) / len(test_loss)
