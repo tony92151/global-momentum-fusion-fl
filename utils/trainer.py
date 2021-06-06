@@ -145,7 +145,7 @@ class trainer:
 
         dvs = []
         for i in range(len(d_iid)):
-            dv = torch.q(torch.add(d_iid[i].to(self.device), d_niid[i].to(self.device), alpha=-1.0)) / torch.norm(
+            dv = torch.norm(torch.add(d_iid[i].to(self.device), d_niid[i].to(self.device), alpha=-1.0)) / torch.norm(
                 d_niid[i].to(self.device))
             dvs.append(dv)
             self.weight_divergence[list(self.weight_divergence.keys())[i]] = dv
