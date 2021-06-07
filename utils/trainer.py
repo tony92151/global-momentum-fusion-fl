@@ -20,7 +20,8 @@ from utils.configer import Configer
 
 
 class trainer:
-    def __init__(self, config=None, dataloader=None, dataloader_iid=None, device=torch.device("cpu"), cid=-1, writer=None,
+    def __init__(self, config=None, dataloader=None, dataloader_iid=None, device=torch.device("cpu"), cid=-1,
+                 writer=None,
                  warmup=None):
         self.config = config
         self.cid = cid
@@ -133,19 +134,34 @@ class trainer:
         del model
         return
 
-    def wdv_test(self, round_, gradients=None, agg_gradient=None, compare_with_iid_data=False):
-        if agg_gradient is None:
-            raise ValueError("egg_gradient should not be none.")
-        if compare_with_iid_data:
-            d_iid = self.train_run_iid(round_)
-        else:
-            d_iid = agg_gradient["gradient"]
+    def mask(self, val):
+        for t in range(len(val)):
+            _, ctx = self.last_gradient["gradient"][t]
+            shape, mask, _ = ctx
+            mask = torch.tensor(mask).view(shape)
+            val[t].mul_(mask.float())
 
+    def wdv_test(self, round_, gradients=None, agg_gradient=None, compare_with=None, mask=False):
+        types = ["iid", "momentum", "agg"]
+        if compare_with is None or compare_with not in types:
+            raise ValueError("compare_with should be {}".format(types))
         d_niid = gradients[self.cid]["gradient"]
 
+        if compare_with == "iid":
+            d_compare = self.train_run_iid(round_)
+            if mask:
+                self.mask(d_compare)
+        elif compare_with == "momentum":
+            d_compare = self.global_momentum if self.global_momentum is not None else agg_gradient["gradient"]
+            if mask:
+                self.mask(d_compare)
+        elif compare_with == "agg":
+            d_compare = agg_gradient["gradient"]
+
         dvs = []
-        for i in range(len(d_iid)):
-            dv = torch.norm(torch.add(d_iid[i].to(self.device), d_niid[i].to(self.device), alpha=-1.0)) / torch.norm(
+        for i in range(len(d_compare)):
+            dv = torch.norm(
+                torch.add(d_compare[i].to(self.device), d_niid[i].to(self.device), alpha=-1.0)) / torch.norm(
                 d_niid[i].to(self.device))
             dvs.append(dv)
             self.weight_divergence[list(self.weight_divergence.keys())[i]] = dv
