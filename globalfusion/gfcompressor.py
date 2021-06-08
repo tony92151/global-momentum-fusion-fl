@@ -5,15 +5,10 @@ import math
 # from torch.multiprocessing import Pool
 torch.multiprocessing.set_start_method('spawn', force=True)
 
-def normalize(value, device=torch.device("cpu")):
-    new_value = []
-    for t in value:
-        t = t.to(device)
-        t = t.abs()
-        t -= t.min()
-        t /= t.max()
-        new_value.append(t)
-    return new_value
+def normalize(value):
+    value = copy.deepcopy(value)
+    value /= torch.norm(value)
+    return value
 
 
 class GFCCompressor:
@@ -34,12 +29,12 @@ class GFCCompressor:
     def compress(self, mem, gmome=None, compress=True):
         agg_gradient = copy.deepcopy(mem)
 
-        if gmome is not None:
-            n_grad = normalize(agg_gradient, device=self.device)
-            n_mome = normalize(gmome, device=self.device)
-        else:
-            n_grad = None
-            n_mome = None
+        # if gmome is not None:
+        #     n_grad = normalize(agg_gradient, device=self.device)
+        #     n_mome = normalize(gmome, device=self.device)
+        # else:
+        #     n_grad = None
+        #     n_mome = None
 
         compressed_grad = []
         ############################################################
@@ -71,18 +66,19 @@ class GFCCompressor:
             numel = tensor.numel()
 
             if gmome is not None:
-                tensor_a = self.fusing_ratio * n_mome[t] + (1 - self.fusing_ratio) * n_grad[t]
+                tensor_a = self.fusing_ratio * normalize(gmome[t]).to(self.device) \
+                            + (1.0 - self.fusing_ratio) * normalize(tensor).to(self.device)
             else:
-                tensor_a = tensor
+                tensor_a = normalize(tensor)
 
             # tensor_a = tensor.abs()
             tensor_a = tensor_a.abs()
-            tensor_a = tensor_a[tensor_a > 0]
+            tensor_b = tensor_a[tensor_a > 0]
 
             if not len(tensor_a) == 0:
-                tmin = torch.min(tensor_a)
-                tmax = torch.max(tensor_a)
-                # pass
+                tmin = torch.min(tensor_b)
+                tmax = torch.max(tensor_b)
+                pass
             else:
                 compress = False
 
@@ -92,20 +88,20 @@ class GFCCompressor:
             if compress:
                 for i in range(10):
                     thr = (tmax + tmin) / 2
-                    mask = tensor.abs().to(self.device) >= thr.to(self.device)
+                    mask = tensor_b.abs().to(self.device) >= thr.to(self.device)
                     selected = mask.sum()
 
-                    if selected > (tensor_a.numel() * min(self.compress_ratio + 0.05, 1)):
+                    if selected > (tensor_b.numel() * min(self.compress_ratio + 0.05, 1)):
                         tmin = thr
                         continue
-                    if selected < (tensor_a.numel() * max(self.compress_ratio - 0.05, 0.01)):
+                    if selected < (tensor_b.numel() * max(self.compress_ratio - 0.05, 0.01)):
                         tmax = thr
                         continue
                     break
                 # cr = max(0.0, min(1.0, self.compress_ratio))
-                # thr = torch.min(torch.topk(tensor_a.abs(), max(1, int(tensor_a.numel() * cr)),
+                # thr = torch.min(torch.topk(tensor_b.abs(), max(1, int(tensor_b.numel() * cr)),
                 #                            largest=True, sorted=False)[0])
-                # mask = tensor.abs().to(self.device) >= thr.to(self.device)
+                mask = tensor_a.to(self.device) >= thr.to(self.device)
             else:
                 mask = tensor.abs().to(self.device) > 0
 
