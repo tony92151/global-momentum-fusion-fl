@@ -13,7 +13,7 @@ import io, os, json
 import time
 import copy
 import random
-
+import numpy as np
 from globalfusion.gfcompressor import GFCCompressor
 from globalfusion.optimizer import GFDGCSGD
 from utils.configer import Configer
@@ -138,7 +138,10 @@ class trainer:
             mask = torch.tensor(mask).view(shape)
             val[t].mul_(mask.float())
 
-    def wdv_test(self, round_, gradients=None, agg_gradient=None, compare_with=None, mask=False, weight_distribution=False):
+    def wdv_test(self, round_, gradients=None, agg_gradient=None, compare_with=None, mask=False,
+                 weight_distribution=False):
+        if self.writer is None:
+            raise ValueError("Tensorboard writer not define.")
         types = ["iid", "momentum", "agg"]
         if compare_with is None or compare_with not in types:
             raise ValueError("compare_with should be {}".format(types))
@@ -166,6 +169,35 @@ class trainer:
                                    , dv, global_step=round_, walltime=None)
         dvs = sum(dvs) / len(dvs)
         self.writer.add_scalar("{} wdv avg".format(self.cid), dvs, global_step=round_, walltime=None)
+
+        if weight_distribution:
+            measurement_max = 2
+            measurement_min = -2
+            chunk_size = 0.0001
+            chunks = [round(measurement_min + (i * chunk_size), 5)
+                      for i in range(int((measurement_max - measurement_min) / chunk_size))]
+            params = np.array([])
+            for i in self.last_model.parameters():
+                param = i.flatten()
+                param = param[param >= measurement_min]
+                param = param[param >= measurement_max]
+                params = np.append(params, np.array(param))
+
+            values = np.array(params).astype(float).reshape(-1)
+            counts, limits = np.histogram(values, bins=chunks)
+            sum_sq = values.dot(values)
+            self.writer.add_histogram_raw(
+                    tag='{} weight_distribution_histogram'.format(self.cid),
+                    min=values.min(),
+                    max=values.max(),
+                    num=len(values),
+                    sum=values.sum(),
+                    sum_squares=sum_sq,
+                    bucket_limits=limits[1:].tolist(),
+                    bucket_counts=counts.tolist(),
+                    global_step=0)
+            # self.last_model
+            # self.last_de_gradient
 
     def train_run_iid(self, round_, base_model=None):
         if base_model is None:

@@ -234,7 +234,7 @@ if __name__ == '__main__':
         ####################################################################################################
         ####################################################################################################
         for tr in trainers:
-            tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=rg, compare_with="momentum", mask=False)
+            tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=rg, compare_with="momentum", mask=False, weight_distribution=True)
             # ["iid", "momentum", "agg"]
 
         test_acc = sum(test_acc) / len(test_acc)
