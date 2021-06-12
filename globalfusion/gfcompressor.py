@@ -66,10 +66,10 @@ class GFCCompressor:
             numel = tensor.numel()
 
             if gmome is not None:
-                tensor_a = self.fusing_ratio * normalize(gmome[t]).to(self.device) \
+                tensor_a = self.fusing_ratio * normalize(gmome[t].flatten()).to(self.device) \
                             + (1.0 - self.fusing_ratio) * normalize(tensor).to(self.device)
             else:
-                tensor_a = normalize(tensor)
+                tensor_a = tensor
 
             # tensor_a = tensor.abs()
             tensor_a = tensor_a.abs()

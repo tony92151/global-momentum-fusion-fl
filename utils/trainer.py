@@ -127,9 +127,6 @@ class trainer:
         self.training_loss = eploss
         self.print_("trainer >> cid: {} >> done, {}".format(self.cid, time.time()))
         self.last_state = optimizer.get_state()
-        #
-        # self.train_run_iid(round_)
-        _ = optimizer.decompress(self.last_gradient["gradient"])
         del optimizer
         del model
         return
@@ -141,7 +138,7 @@ class trainer:
             mask = torch.tensor(mask).view(shape)
             val[t].mul_(mask.float())
 
-    def wdv_test(self, round_, gradients=None, agg_gradient=None, compare_with=None, mask=False):
+    def wdv_test(self, round_, gradients=None, agg_gradient=None, compare_with=None, mask=False, weight_distribution=False):
         types = ["iid", "momentum", "agg"]
         if compare_with is None or compare_with not in types:
             raise ValueError("compare_with should be {}".format(types))
