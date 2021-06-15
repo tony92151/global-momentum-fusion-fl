@@ -184,7 +184,7 @@ class trainer:
                 param = i.flatten()
                 param = param[param >= measurement_min]
                 param = param[param >= measurement_max]
-                params = np.append(params, np.array(param))
+                params = np.append(params, param.detach().numpy())
 
             values = np.array(params).astype(float).reshape(-1)
             counts, limits = np.histogram(values, bins=chunks)
@@ -266,6 +266,7 @@ class trainer:
         return d_iid
 
     def opt_step_base_model(self, base_gradient=None, round_=None, base_model=None):
+        self.print_("trainer >> cid: {} >> opt_step, {}".format(self.cid, time.time()))
         if base_model is None:
             model = copy.deepcopy(self.last_model)
         else:

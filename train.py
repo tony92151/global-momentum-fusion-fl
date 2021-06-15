@@ -88,7 +88,8 @@ if __name__ == '__main__':
     print("\nInit dataloader...")
     if "cifar10" in config.trainer.get_dataset_path():
         dataloaders = cifar_dataloaders(root=config.trainer.get_dataset_path(),
-                                        index_path=os.path.join(config.trainer.get_dataset_path(), "index.json"),
+                                        index_path=os.path.join(config.trainer.get_dataset_path(),
+                                                                "datatype", "index.json"),
                                         batch_size=config.trainer.get_local_bs())
     elif "femnist" in config.trainer.get_dataset_path():
         dataloaders = femnist_dataloaders(root=config.trainer.get_dataset_path(),
@@ -234,7 +235,8 @@ if __name__ == '__main__':
         ####################################################################################################
         ####################################################################################################
         for tr in trainers:
-            tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=rg, compare_with="momentum", mask=False, weight_distribution=True)
+            tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=rg,
+                        compare_with="momentum", mask=False, weight_distribution=False)
             # ["iid", "momentum", "agg"]
 
         test_acc = sum(test_acc) / len(test_acc)
@@ -248,7 +250,7 @@ if __name__ == '__main__':
         l = 0.0
         ls = []
         for k in list(trainers[0].weight_divergence.keys()):
-            l = [tr.weight_divergence[k] for tr in trainers]
+            l = [tr.weight_divergence[k].cpu() for tr in trainers]
             l = sum(l) / len(l)
             ls.append(l)
             writer.add_scalar("wdv client_avg layer {}".format(k), l, global_step=epoch, walltime=None)

@@ -30,8 +30,8 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     #                                           shuffle=True, num_workers=2)
     testset = torchvision.datasets.CIFAR10(root=root, train=False,
                                            download=True, transform=transform_test)
-
-    file_ = open(index_path, 'r')
+    ################################################################################################
+    file_ = open(index_path.replace("datatype", "niid"), 'r')
     context = json.load(file_)
     file_.close()
 
@@ -47,7 +47,21 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
 
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                              shuffle=True, num_workers=2)
+    ################################################################################################
+    file_ = open(index_path.replace("datatype", "iid"), 'r')
+    context2 = json.load(file_)
+    file_.close()
 
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
+                                              num_workers=2, shuffle=True)
+
+    trainloaders_iid = []
+    for i in range(len(context2.keys())):
+        trainloaders_iid.append(torch.utils.data.DataLoader(trainset,
+                                                            batch_size=batch_size,
+                                                            num_workers=2,
+                                                            sampler=torch.utils.data.SubsetRandomSampler(context[str(i)])))
+    ################################################################################################
     if show:
         for j in range(len(context.keys())):
             ans = [0 for i in range(10)]
@@ -55,7 +69,16 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
                 ans[trainset.targets[i]] += 1
             print("client: {} , {}, sum: {}".format(j, ans, sum(ans)))
 
-    return {"test": testloader, "train_s": trainloaders, "train": trainloader}
+    # test: single loader
+    # train: single loader
+    # train_s: loaders
+    # test_s: loaders
+    # train_s_iid: loaders with iid data
+    return {"test": testloader,
+            "train": trainloader,
+            "train_s": trainloaders,
+            "test_s": None,
+            "train_s_iid": trainloaders_iid}
 
 
 class MNISTDataset(Dataset):
@@ -154,6 +177,7 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     # train: single loader
     # train_s: loaders
     # test_s: loaders
+    # train_s_iid: loaders with iid data
     return {"test": testloader, "train_s": trainloaders,
             "test_s": testloaders, "train": trainloader,
             "train_s_iid": trainloaders_iid}
