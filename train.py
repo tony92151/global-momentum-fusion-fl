@@ -34,11 +34,14 @@ def init_writer(tbpath):
 
 
 def as_completed_join(trainers=None):
+    time.sleep(1)
     while True:
         completed = [t.as_completed for t in trainers]
-        if completed == len(trainers):
-            break
-        time.sleep(0.05)
+        # print(completed)
+        if False in completed:
+            time.sleep(1)
+            continue
+        break
 
 
 if __name__ == '__main__':
@@ -204,7 +207,9 @@ if __name__ == '__main__':
         test_acc = []
         test_loss = []
         ev.round = epoch
-        result = [ev.eval_run(tr.last_model) for tr in trainers]
+        [tr.last_model for tr in trainers]
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            result = executor.map(ev.eval_run, [tr.last_model for tr in trainers])
         for acc, loss in result:
             test_acc.append(acc)
             test_loss.append(loss)
