@@ -20,12 +20,14 @@ from utils.configer import Configer
 from utils.opti import SERVEROPT
 from utils.aggregator import set_gradient
 from torch_optimizer import Yogi
+from threading import Thread
+from queue import Queue
 
 
-class trainer:
+class trainer(Thread):
     def __init__(self, config=None, dataloader=None, dataloader_iid=None, device=torch.device("cpu"), cid=-1,
-                 writer=None,
-                 warmup=None):
+                 writer=None, warmup=None):
+        Thread.__init__(self)
         self.config: Configer = config
         self.cid = cid
         # self.dataloader = copy.deepcopy(dataloader)
@@ -47,6 +49,8 @@ class trainer:
             self.loss_function = nn.CrossEntropyLoss()
 
         self.writer = writer
+        self.queue = Queue()
+        self.as_completed = True
         self.verbose = False
 
     def print_(self, val):
@@ -60,11 +64,15 @@ class trainer:
         for i in names:
             self.weight_divergence[i] = 0.0
 
-    def train_run(self, round_, base_model=None):
+    def train_run(self, round_=None, base_model=None):
         if base_model is None:
             model = copy.deepcopy(self.last_model)
         else:
             model = copy.deepcopy(base_model)
+        if round_ is None:
+            round_ = self.round
+        else:
+            round_ = 1
 
         lr = self.warmup.get_lr_from_step(round_)
         model.train().to(self.device)
@@ -141,13 +149,17 @@ class trainer:
             mask = torch.tensor(mask).view(shape)
             val[t].mul_(mask.float())
 
-    def wdv_test(self, round_, gradients=None, agg_gradient=None, compare_with=None, mask=False,
+    def wdv_test(self, round_=None, gradients=None, agg_gradient=None, compare_with=None, mask=False,
                  weight_distribution=False):
         if self.writer is None:
             raise ValueError("Tensorboard writer not define.")
         types = ["iid", "momentum", "agg"]
         if compare_with is None or compare_with not in types:
             raise ValueError("compare_with should be {}".format(types))
+        if round_ is None:
+            round_ = self.round
+        else:
+            round_ = 1
         d_niid = gradients[self.cid]["gradient"]
 
         if compare_with == "iid":
@@ -304,3 +316,33 @@ class trainer:
         else:
             for i in range(len(self.global_momentum)):
                 self.global_momentum[i].mul_(0.8).add_(self.last_de_gradient["gradient"][i])
+
+    ########################################################################################################
+    def run(self):
+        j = ["train_run", "opt_step_base_model", "wdv_test"]
+        while True:
+            try:
+                time.sleep(0.1)
+                job = self.queue.get()
+                if job is None:
+                    break
+
+                self.as_completed = False
+                if job["task"] == "train_run":
+                    self.train_run(round_=job["epoch"])
+                elif job["task"] == "opt_step_base_model":
+                    self.opt_step_base_model(base_gradient=job["gradient"])
+                elif job["task"] == "wdv_test":
+                    self.wdv_test(gradients=job["gradient"], agg_gradient=job["agg_gradient"],
+                                  compare_with=job["compare_with"], mask=job["mask"],
+                                  weight_distribution=job["weight_distribution"])
+                self.as_completed = True
+            finally:
+                self.queue.task_done()
+        self.print_("trainer >> cid: {} >> exit, {}".format(self.cid, time.time()))
+
+    def add_job(self, dic=None, done=False):
+        if not done:
+            self.queue.put(dic)
+        else:
+            self.queue.put(None)

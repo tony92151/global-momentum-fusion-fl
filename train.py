@@ -33,8 +33,12 @@ def init_writer(tbpath):
     return writer
 
 
-def run(job, arg):
-    return job(arg)
+def as_completed_join(trainers=None):
+    while True:
+        completed = [t.as_completed for t in trainers]
+        if completed == len(trainers):
+            break
+        time.sleep(0.05)
 
 
 if __name__ == '__main__':
@@ -160,84 +164,61 @@ if __name__ == '__main__':
     traffic += get_serialize_size(net) * 4  # 4 clients download
     # train
     print("\nStart training...")
-    if not num_pool == -1:
-        executor = ThreadPoolExecutor(max_workers=num_pool)
+    for tr in trainers:
+        tr.daemon = True
+        tr.start()
+
     for epoch in tqdm(range(config.trainer.get_max_iteration())):
         gs = []
 
         ####################################################################################################
         ####################################################################################################
-        if not num_pool == -1:
-            # training
-            futures = []
-            for tr in trainers:
-                futures.append(executor.submit(tr.train_run, epoch))
-            for future in as_completed(futures):
-                pass
-            del futures
-
-            for tr in trainers:
-                gs.append(tr.last_gradient)
-
-            traffic += get_serialize_size(gs) * 2  # 4 clients upload and aggregator download download
-
-            # decompress
-            result = executor.map(decompress, [gs[i]["gradient"] for i in range(len(gs))])
-            result = [i for i in result]
-            for i in range(len(gs)):
-                gs[i]["gradient"] = result[i]
-
-            # aggregate
-            rg = aggregater(gs, device=torch.device("cuda:{}".format(gpus[0])), aggrete_bn=False)
-
-            # one-step update
-            futures_ = []
-            for tr in trainers:
-                tr.round = epoch
-                futures_.append(executor.submit(tr.opt_step_base_model, rg))
-            for future in as_completed(futures_):
-                pass
-            del futures_
-
-            # test
-            test_acc = []
-            test_loss = []
-            ev.round = epoch
-            # executor = ThreadPoolExecutor(max_workers=num_pool)
-            evl_models = [copy.deepcopy(tr.last_model) for tr in trainers]
-            result = executor.map(ev.eval_run, evl_models)
-            for acc, loss in result:
-                test_acc.append(acc)
-                test_loss.append(loss)
-            del evl_models
-        ####################################################################################################
-        else:
-            for i, tr in zip(range(len(trainers)), trainers):
-                _ = tr.train_run(round_=epoch)
-                gs.append(tr.last_gradient)
-
-            traffic += get_serialize_size(gs) * 2  # 4 clients upload and aggregator download download
-
-            for i in range(len(gs)):
-                gs[i]["gradient"] = decompress(gs[i]["gradient"], device=torch.device("cuda:0"))
-
-            rg = aggregater(gs, device=torch.device("cuda:0"), aggrete_bn=False)
-
-            for tr in trainers:
-                tm = tr.opt_step_base_model(round_=epoch, base_gradient=rg)
-
-            test_acc = []
-            test_loss = []
-            for tr in trainers:
-                acc, loss = ev.eval_run(model=copy.deepcopy(tr.last_model), round_=epoch)
-                test_acc.append(acc)
-                test_loss.append(loss)
-        ####################################################################################################
-        ####################################################################################################
+        # training
         for tr in trainers:
-            tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=rg,
-                        compare_with="momentum", mask=False, weight_distribution=False)
+            tr.round = epoch
+            tr.add_job({"task": "train_run",
+                        "epoch": epoch})
+        as_completed_join(trainers)
+
+        for tr in trainers:
+            gs.append(tr.last_gradient)
+
+        traffic += get_serialize_size(gs) * 2  # 4 clients upload and aggregator download download
+
+        # decompress
+        result = [decompress(gs[i]["gradient"]) for i in range(len(gs))]
+        for i in range(len(gs)):
+            gs[i]["gradient"] = result[i]
+
+        # aggregate
+        rg = aggregater(gs, device=torch.device("cuda:{}".format(gpus[0])), aggrete_bn=False)
+
+        # one-step update
+        for tr in trainers:
+            tr.round = epoch
+            tr.add_job({"task": "opt_step_base_model",
+                        "gradient": rg})
+        as_completed_join(trainers)
+
+        # test
+        test_acc = []
+        test_loss = []
+        ev.round = epoch
+        result = [ev.eval_run(tr.last_model) for tr in trainers]
+        for acc, loss in result:
+            test_acc.append(acc)
+            test_loss.append(loss)
+        ####################################################################################################
+        # wdv_test
+        for tr in trainers:
+            tr.add_job({"task": "wdv_test",
+                        "gradient": gs,
+                        "agg_gradient": rg,
+                        "compare_with": "momentum",
+                        "mask": False,
+                        "weight_distribution": False})
             # ["iid", "momentum", "agg"]
+        as_completed_join(trainers)
 
         test_acc = sum(test_acc) / len(test_acc)
         test_loss = sum(test_loss) / len(test_loss)
@@ -257,8 +238,6 @@ if __name__ == '__main__':
 
         writer.add_scalar("wdv client_avg", sum(ls) / len(ls), global_step=epoch, walltime=None)
 
-    if not num_pool == -1:
-        executor.shutdown(True)
     # save result
     result_path = os.path.join(out_path, "result.json")
     if not os.path.isfile(result_path):
