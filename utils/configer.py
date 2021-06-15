@@ -86,6 +86,12 @@ class config_agg:
     def get_threshold(self) -> int:
         return int(self.config["threshold"])
 
+    def get_optimizer(self) -> str:
+        opts = ["SGD", "ADAGRAD", "ADAM", "YOGI"]
+        if self.config["optimizer"] not in opts:
+            raise ValueError("Optimizer in aggregator should in {}".format(opts))
+        return self.config["optimizer"]
+
 
 class Configer:
     def __init__(self, configfile):

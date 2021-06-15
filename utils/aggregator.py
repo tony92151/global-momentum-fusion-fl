@@ -1,14 +1,14 @@
 import base64
 import pickle
 import sys
-
+from copy import deepcopy as dcopy
 import torch
 from globalfusion.gfcompressor import GFCCompressor
 
 
 def add_mean_var(means=None, vrs=None, tracks=None):
     if (type(means) is not list) or (type(means) is not list) or (type(means) is not list):
-        raise ("")
+        raise ValueError("means should be list.")
     tracks_sum = sum(tracks)
 
     means = [torch.tensor(i) for i in means]
@@ -71,3 +71,10 @@ def compress(gradient, device=torch.device("cpu")):
 def get_serialize_size(obj):
     b = base64.b64encode(pickle.dumps(obj)).decode('utf-8')
     return round(sys.getsizeof(b) * 10e-6, 3)
+
+
+def set_gradient(opt, cg):
+    agged_grad = cg
+    for group in opt.param_groups:
+        for p in range(len(group['params'])):
+            group['params'][p].grad = dcopy(agged_grad[p]).to(group['params'][p].device)

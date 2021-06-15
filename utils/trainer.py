@@ -17,13 +17,16 @@ import numpy as np
 from globalfusion.gfcompressor import GFCCompressor
 from globalfusion.optimizer import GFDGCSGD
 from utils.configer import Configer
+from utils.opti import SERVEROPT
+from utils.aggregator import set_gradient
+from torch_optimizer import Yogi
 
 
 class trainer:
     def __init__(self, config=None, dataloader=None, dataloader_iid=None, device=torch.device("cpu"), cid=-1,
                  writer=None,
                  warmup=None):
-        self.config = config
+        self.config: Configer = config
         self.cid = cid
         # self.dataloader = copy.deepcopy(dataloader)
         self.dataloader = dataloader
@@ -187,15 +190,15 @@ class trainer:
             counts, limits = np.histogram(values, bins=chunks)
             sum_sq = values.dot(values)
             self.writer.add_histogram_raw(
-                    tag='{} weight_distribution_histogram'.format(self.cid),
-                    min=values.min(),
-                    max=values.max(),
-                    num=len(values),
-                    sum=values.sum(),
-                    sum_squares=sum_sq,
-                    bucket_limits=limits[1:].tolist(),
-                    bucket_counts=counts.tolist(),
-                    global_step=0)
+                tag='{} weight_distribution_histogram'.format(self.cid),
+                min=values.min(),
+                max=values.max(),
+                num=len(values),
+                sum=values.sum(),
+                sum_squares=sum_sq,
+                bucket_limits=limits[1:].tolist(),
+                bucket_counts=counts.tolist(),
+                global_step=0)
             # self.last_model
             # self.last_de_gradient
 
@@ -273,10 +276,13 @@ class trainer:
         lr = self.warmup.get_lr_from_step(round_)
 
         model.to(self.device).train()
-        optimizer = GFDGCSGD(params=model.parameters(), lr=lr, device=self.device)
+        opt = self.config.agg.get_optimizer()
+        optimizer = SERVEROPT[opt](params=model.parameters(), lr=lr)
+        # optimizer = GFDGCSGD(params=model.parameters(), lr=lr, device=self.device)
         base_gradient["gradient"] = [t.to(self.device) for t in base_gradient["gradient"]]
-        optimizer.one_step(base_gradient["gradient"])
-
+        # optimizer.one_step(base_gradient["gradient"])
+        set_gradient(opt=optimizer, cg=base_gradient["gradient"])
+        optimizer.step()
         if 'bn' in self.last_gradient.keys():
             idx = 0
             for layer in model.cpu().modules():
