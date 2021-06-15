@@ -132,10 +132,10 @@ if __name__ == '__main__':
     # net = Net()
     model_table = {
         # for cifar10
+        "small_cifar": Net_cifar,
         "resnet18_cifar": ResNet18_cifar,
         "resnet50_cifar": ResNet50_cifar,
         "resnet101_cifar": ResNet101_cifar,
-        "small_cifar": Net_cifar,
         "resnet110_cifar": ResNet110_cifar_gdc,
         # for femnist
         "small_femnist": Net_femnist,
