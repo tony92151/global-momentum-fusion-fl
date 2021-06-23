@@ -18,9 +18,6 @@ from utils.eval import evaluater
 from utils.models import *
 from utils.trainer import trainer
 
-# Thread out of memory issue.
-# https://github.com/dchevell/flask-executor/issues/6
-
 torch.manual_seed(0)
 
 
@@ -43,7 +40,6 @@ if __name__ == '__main__':
     parser.add_argument('--output', help="output", type=str, default=None)
     parser.add_argument('--pool', help="Multiprocess Worker Pools", type=str, default="-1")
     parser.add_argument('--gpu', help="GPU usage. ex: 0,1,2", type=str, default="0")
-    parser.add_argument('--baseline', help="baseline single trainer training,", type=bool, default=False)
     args = parser.parse_args()
 
     if args.config is None or args.output is None:
@@ -100,35 +96,23 @@ if __name__ == '__main__':
     print("Total test images: {}".format(len(dataloaders["test"].dataset)))
 
     # Init trainers
-    if not baseline:
-        print("\nInit trainers...")
-        print("Nodes: {}".format(config.general.get_nodes()))
-        trainers = []
-        if config.trainer.get_dataset_type() == "niid":
-            train_d = dataloaders["train_s"]
-            print("\nUse non-iid dataloader...")
-        else:
-            train_d = dataloaders["train_s_iid"]
-            print("\nUse iid dataloader...")
-        for i in tqdm(range(config.general.get_nodes())):
-            trainers.append(trainer(config=config,
-                                    device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
-                                    dataloader=train_d[i],
-                                    dataloader_iid=dataloaders["train_s_iid"][i],
-                                    cid=i,
-                                    writer=writer,
-                                    warmup=w))
+    print("\nInit trainers...")
+    print("Nodes: {}".format(config.general.get_nodes()))
+    trainers = []
+    if config.trainer.get_dataset_type() == "niid":
+        train_d = dataloaders["train_s"]
+        print("\nUse non-iid dataloader...")
     else:
-        print("\nInit baseline trainer...")
-        print("Nodes: {}".format(config.general.get_nodes()))
-        trainers = []
-        for i in tqdm(range(1)):
-            trainers.append(trainer(config=config,
-                                    device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
-                                    dataloader=dataloaders["train"],
-                                    cid=i,
-                                    writer=writer,
-                                    warmup=w))
+        train_d = dataloaders["train_s_iid"]
+        print("\nUse iid dataloader...")
+    for i in tqdm(range(config.general.get_nodes())):
+        trainers.append(trainer(config=config,
+                                device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
+                                dataloader=train_d[i],
+                                dataloader_iid=dataloaders["train_s_iid"][i],
+                                cid=i,
+                                writer=writer,
+                                warmup=w))
 
     # net = Net()
     model_table = {

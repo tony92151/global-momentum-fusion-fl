@@ -1,4 +1,4 @@
-torch~=1.7.1
+torch~=1.8.0
 torchvision~=0.8.2
 multiprocess
 ipfshttpclient==0.7.0

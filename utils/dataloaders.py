@@ -26,8 +26,7 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     ])
     trainset = torchvision.datasets.CIFAR10(root=root, train=True,
                                             download=True, transform=transform_train)
-    # trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-    #                                           shuffle=True, num_workers=2)
+
     testset = torchvision.datasets.CIFAR10(root=root, train=False,
                                            download=True, transform=transform_test)
     ################################################################################################
@@ -35,32 +34,27 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     context = json.load(file_)
     file_.close()
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                              num_workers=2, shuffle=True)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
 
     trainloaders = []
     for i in range(len(context.keys())):
         trainloaders.append(torch.utils.data.DataLoader(trainset,
                                                         batch_size=batch_size,
-                                                        num_workers=2,
                                                         sampler=torch.utils.data.SubsetRandomSampler(context[str(i)])))
 
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
-                                             shuffle=True, num_workers=2)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=True)
     ################################################################################################
     file_ = open(index_path.replace("datatype", "iid"), 'r')
     context2 = json.load(file_)
     file_.close()
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                              num_workers=2, shuffle=True)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
 
     trainloaders_iid = []
     for i in range(len(context2.keys())):
         trainloaders_iid.append(torch.utils.data.DataLoader(trainset,
                                                             batch_size=batch_size,
-                                                            num_workers=2,
-                                                            sampler=torch.utils.data.SubsetRandomSampler(context[str(i)])))
+                                                            sampler=torch.utils.data.SubsetRandomSampler(context2[str(i)])))
     ################################################################################################
     if show:
         for j in range(len(context.keys())):
@@ -132,11 +126,10 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     trainloaders = [torch.utils.data.DataLoader(
         train_dataset,
         batch_size=batch_size,
-        num_workers=2,
         sampler=SubsetRandomSampler(train_idx[i]))
         for i in range(len(train_idx))]
 
-    trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, num_workers=2, shuffle=True)
+    trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     #############################################################################
     test_data_all_x = []
     test_data_all_y = []
@@ -153,11 +146,10 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     testloaders = [torch.utils.data.DataLoader(
         test_dataset,
         batch_size=batch_size,
-        num_workers=2,
         sampler=SubsetRandomSampler(test_idx[i]))
         for i in range(len(test_idx))]
 
-    testloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, num_workers=2, shuffle=True)
+    testloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     # iid dataloaders
     idx = list(range(len(train_data_all_x)))
@@ -169,7 +161,6 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     trainloaders_iid = [torch.utils.data.DataLoader(
         train_dataset_iid,
         batch_size=batch_size,
-        num_workers=2,
         sampler=SubsetRandomSampler(train_idx[i]))
         for i in range(len(train_idx))]
 
