@@ -56,8 +56,6 @@ if __name__ == '__main__':
     else:
         print("\nGPU usage: {}".format(gpus))
 
-    baseline = args.baseline
-
     print("Read cinfig at : {}".format(con_path))
     config = Configer(con_path)
 

@@ -54,7 +54,7 @@ class evaluater:
         with torch.no_grad():
             for data, target in self.dataloader:
                 # data = data.view(data.size(0),-1)
-                data = data.float()
+                data = data
 
                 data = data.to(self.device)
                 target = target.to(self.device)

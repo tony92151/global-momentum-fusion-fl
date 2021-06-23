@@ -101,7 +101,7 @@ class trainer:
                 data = data.to(self.device)
                 target = target.to(self.device)
                 optimizer.zero_grad()
-                output = model(data.float())
+                output = model(data)
                 loss = self.loss_function(output, target)
                 losses.append(loss.item())
                 loss.backward()

@@ -2,7 +2,7 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 from utils.dgc_model.resnet import CifarResNet
-from utils.shakespeare_model import stacked_lstm
+from utils.shakespeare_model.stacked_lstm import LSTM_shakespeare
 from utils.configer import Configer
 
 
@@ -122,7 +122,7 @@ MODELS_TABLE = {
     "resnet50_femnist": ResNet50_femnist,
     "resnet101_femnist": ResNet101_femnist,
     # for shakespeare
-    "lstm_shakespeare": stacked_lstm,
+    "lstm_shakespeare": LSTM_shakespeare,
 }
 
 
