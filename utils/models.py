@@ -2,6 +2,14 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 from utils.dgc_model.resnet import CifarResNet
+from utils.shakespeare_model import stacked_lstm
+from utils.configer import Configer
+
+
+class ResNet9_cifar(torchvision.models.resnet.ResNet):
+    def __init__(self):
+        super(ResNet9_cifar, self).__init__(block=torchvision.models.resnet.BasicBlock, layers=[1, 1, 1, 1],
+                                            num_classes=10)
 
 
 class ResNet18_cifar(torchvision.models.resnet.ResNet):
@@ -22,11 +30,16 @@ class ResNet101_cifar(torchvision.models.resnet.ResNet):
                                               num_classes=10)
 
 
+class ResNet110_cifar_gdc(CifarResNet):
+    def __init__(self):
+        super(ResNet110_cifar_gdc, self).__init__(params=[(16, 18, 1), (32, 18, 2), (64, 18, 2)], num_classes=10)
+
+
 ##########################################################################################
 class ResNet9_femnist(torchvision.models.resnet.ResNet):
     def __init__(self):
         super(ResNet9_femnist, self).__init__(block=torchvision.models.resnet.BasicBlock, layers=[1, 1, 1, 1],
-                                               num_classes=62)
+                                              num_classes=62)
         self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=1, padding=3, bias=False)
 
 
@@ -70,6 +83,7 @@ class Net_cifar(nn.Module):
         x = self.fc3(x)
         return x
 
+
 class Net_femnist(nn.Module):
     def __init__(self):
         super(Net_femnist, self).__init__()
@@ -92,6 +106,29 @@ class Net_femnist(nn.Module):
         return x
 
 
-class ResNet110_cifar_gdc(CifarResNet):
-    def __init__(self):
-        super(ResNet110_cifar_gdc, self).__init__(params=[(16, 18, 1), (32, 18, 2), (64, 18, 2)], num_classes=10)
+#############################################
+MODELS_TABLE = {
+    # for cifar10
+    "small_cifar": Net_cifar,
+    "resnet9_cifar": ResNet9_cifar,
+    "resnet18_cifar": ResNet18_cifar,
+    "resnet50_cifar": ResNet50_cifar,
+    "resnet101_cifar": ResNet101_cifar,
+    "resnet110_cifar": ResNet110_cifar_gdc,
+    # for femnist
+    "small_femnist": Net_femnist,
+    "resnet9_femnist": ResNet9_femnist,
+    "resnet18_femnist": ResNet18_femnist,
+    "resnet50_femnist": ResNet50_femnist,
+    "resnet101_femnist": ResNet101_femnist,
+    # for shakespeare
+    "lstm_shakespeare": stacked_lstm,
+}
+
+
+def MODELS(config: Configer = None):
+    if config is None:
+        raise ValueError("config shouldn't be none")
+    if config.trainer.get_model() not in MODELS.keys():
+        raise ValueError("model not define in {}".format(MODELS.keys()))
+    return MODELS_TABLE[config.trainer.get_model()]

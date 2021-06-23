@@ -13,9 +13,9 @@ from tqdm import tqdm
 from globalfusion.warmup import warmup
 from utils.aggregator import aggregater, decompress, get_serialize_size
 from utils.configer import Configer
-from utils.dataloaders import cifar_dataloaders, femnist_dataloaders
+from utils.dataloaders import cifar_dataloaders, femnist_dataloaders,DATALOADER
 from utils.eval import evaluater
-from utils.models import *
+from utils.models import MODELS
 from utils.trainer import trainer
 
 torch.manual_seed(0)
@@ -82,18 +82,7 @@ if __name__ == '__main__':
                end_step=config.trainer.get_end_step())
 
     print("\nInit dataloader...")
-    if "cifar10" in config.trainer.get_dataset_path():
-        dataloaders = cifar_dataloaders(root=config.trainer.get_dataset_path(),
-                                        index_path=os.path.join(config.trainer.get_dataset_path(),
-                                                                "datatype", "index.json"),
-                                        batch_size=config.trainer.get_local_bs())
-    elif "femnist" in config.trainer.get_dataset_path():
-        dataloaders = femnist_dataloaders(root=config.trainer.get_dataset_path(),
-                                          batch_size=config.trainer.get_local_bs(),
-                                          clients=config.general.get_nodes())
-
-    print("Total train images: {}".format(len(dataloaders["train"].dataset)))
-    print("Total test images: {}".format(len(dataloaders["test"].dataset)))
+    dataloaders = DATALOADER(config)
 
     # Init trainers
     print("\nInit trainers...")
@@ -114,23 +103,8 @@ if __name__ == '__main__':
                                 writer=writer,
                                 warmup=w))
 
-    # net = Net()
-    model_table = {
-        # for cifar10
-        "small_cifar": Net_cifar,
-        "resnet18_cifar": ResNet18_cifar,
-        "resnet50_cifar": ResNet50_cifar,
-        "resnet101_cifar": ResNet101_cifar,
-        "resnet110_cifar": ResNet110_cifar_gdc,
-        # for femnist
-        "small_femnist": Net_femnist,
-        "resnet9_femnist": ResNet9_femnist,
-        "resnet18_femnist": ResNet18_femnist,
-        "resnet50_femnist": ResNet50_femnist,
-        "resnet101_femnist": ResNet101_femnist,
-    }
     print("\nInit model...")
-    net = model_table[config.trainer.get_model()]()
+    net = MODELS(config)()
 
     for tr in trainers:
         tr.set_mdoel(net)
@@ -220,7 +194,7 @@ if __name__ == '__main__':
         ####################################################################################################
         for tr in trainers:
             tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=rg,
-                        compare_with="momentum", mask=False, weight_distribution=False)
+                        compare_with="momentum", mask=False, weight_distribution=False, layer_info=False)
             # ["iid", "momentum", "agg"]
 
         test_acc = sum(test_acc) / len(test_acc)

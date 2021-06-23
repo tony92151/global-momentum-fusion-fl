@@ -2,13 +2,12 @@ import json
 import os, copy
 import random
 import torch
-from torch import tensor
 import torchvision
 from torchvision import transforms
-from torch.utils.data import DataLoader, TensorDataset, Dataset
-import numpy as np
+from torch.utils.data import DataLoader, Dataset
 from torch.utils.data import SubsetRandomSampler
 import torch.multiprocessing
+from utils.configer import Configer
 
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -54,7 +53,8 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     for i in range(len(context2.keys())):
         trainloaders_iid.append(torch.utils.data.DataLoader(trainset,
                                                             batch_size=batch_size,
-                                                            sampler=torch.utils.data.SubsetRandomSampler(context2[str(i)])))
+                                                            sampler=torch.utils.data.SubsetRandomSampler(
+                                                                context2[str(i)])))
     ################################################################################################
     if show:
         for j in range(len(context.keys())):
@@ -182,3 +182,117 @@ def len_to_index(train_idx):
         ll.append(l[:i])
         l = l[i:]
     return ll
+
+
+class SHDataset(Dataset):
+    def __init__(self, feature, target, transform=None):
+        self.X = torch.tensor(feature)
+        self.Y = torch.tensor(target)
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.Y[idx]
+
+
+def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
+    train_data = torch.load(os.path.join(root, "train_data.pt"))
+    test_data = torch.load(os.path.join(root, "test_data.pt"))
+    # ['users', 'num_samples', 'user_data', 'hierarchies']
+    if clients > len(train_data['users']):
+        raise ValueError(
+            "Request clients({}) larger then dataset provide({}).".format(clients, len(train_data['users'])))
+    train_data['users'] = train_data['users'][:clients]
+    test_data['users'] = test_data['users'][:clients]
+    #############################################################################
+    train_data_all_x = []
+    train_data_all_y = []
+    train_idx = []
+    for i in train_data["users"]:
+        train_data_all_x += [word_to_indices(sen) for sen in train_data["user_data"][i]["x"]]
+        train_data_all_y += [word_to_indices(sen) for sen in train_data["user_data"][i]["y"]]
+        train_idx.append(len(train_data["user_data"][i]["y"]))
+
+    train_dataset = SHDataset(train_data_all_x, train_data_all_y)
+
+    train_idx = len_to_index(train_idx)
+    trainloaders = [torch.utils.data.DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        sampler=SubsetRandomSampler(train_idx[i]))
+        for i in range(len(train_idx))]
+
+    trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    #############################################################################
+    test_data_all_x = []
+    test_data_all_y = []
+    test_idx = []
+    for i in test_data["users"]:
+        test_data_all_x += [word_to_indices(sen) for sen in test_data["user_data"][i]["x"]]
+        test_data_all_y += [word_to_indices(sen) for sen in test_data["user_data"][i]["y"]]
+        test_idx.append(len(test_data["user_data"][i]["y"]))
+
+    test_dataset = SHDataset(test_data_all_x, test_data_all_y)
+
+    test_idx = len_to_index(test_idx)
+    testloaders = [torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        sampler=SubsetRandomSampler(test_idx[i]))
+        for i in range(len(test_idx))]
+
+    testloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+
+    # iid dataloaders
+    idx = list(range(len(train_data_all_x)))
+    random.shuffle(idx)
+    new_train_data_all_x = [train_data_all_x[i] for i in idx]
+    new_train_data_all_y = [train_data_all_y[i] for i in idx]
+    train_dataset_iid = SHDataset(new_train_data_all_x, new_train_data_all_y)
+    trainloaders_iid = [torch.utils.data.DataLoader(
+        train_dataset_iid,
+        batch_size=batch_size,
+        sampler=SubsetRandomSampler(train_idx[i]))
+        for i in range(len(train_idx))]
+
+    # test: single loader
+    # train: single loader
+    # train_s: loaders
+    # test_s: loaders
+    # train_s_iid: loaders with iid data
+    return {"test": testloader, "train_s": trainloaders,
+            "test_s": testloaders, "train": trainloader,
+            "train_s_iid": trainloaders_iid}
+
+
+def word_to_indices(word):
+    ALL_LETTERS = "\n !\"&'(),-.0123456789:;>?ABCDEFGHIJKLMNOPQRSTUVWXYZ[]abcdefghijklmnopqrstuvwxyz}"
+    indices = []
+    for c in word:
+        indices.append(ALL_LETTERS.find(c))
+    return indices
+
+
+#################################################################
+def DATALOADER(config: Configer = None):
+    # DATALOADER_TABLE = ["cifar10", "femnist", "shakespeare"]
+    if config is None:
+        raise ValueError("config shouldn't be none")
+    if "cifar10" in config.trainer.get_dataset_path():
+        dataloaders = cifar_dataloaders(root=config.trainer.get_dataset_path(),
+                                        index_path=os.path.join(config.trainer.get_dataset_path(),
+                                                                "datatype", "index.json"),
+                                        batch_size=config.trainer.get_local_bs())
+    elif "femnist" in config.trainer.get_dataset_path():
+        dataloaders = femnist_dataloaders(root=config.trainer.get_dataset_path(),
+                                          batch_size=config.trainer.get_local_bs(),
+                                          clients=config.general.get_nodes())
+    elif "shakespeare" in config.trainer.get_dataset_path():
+        dataloaders = shakespeare_dataloaders(root=config.trainer.get_dataset_path(),
+                                              batch_size=config.trainer.get_local_bs(),
+                                              clients=config.general.get_nodes())
+
+    print("Total train images: {}".format(len(dataloaders["train"].dataset)))
+    print("Total test images: {}".format(len(dataloaders["test"].dataset)))
+    return dataloaders

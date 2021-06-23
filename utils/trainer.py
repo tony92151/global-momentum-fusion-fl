@@ -142,7 +142,7 @@ class trainer:
             val[t].mul_(mask.float())
 
     def wdv_test(self, round_, gradients=None, agg_gradient=None, compare_with=None, mask=False,
-                 weight_distribution=False):
+                 weight_distribution=False, layer_info=False):
         if self.writer is None:
             raise ValueError("Tensorboard writer not define.")
         types = ["iid", "momentum", "agg"]
@@ -168,10 +168,12 @@ class trainer:
                 d_niid[i].to(self.device))
             dvs.append(dv)
             self.weight_divergence[list(self.weight_divergence.keys())[i]] = dv
-            self.writer.add_scalar("{} wdv layer {}".format(self.cid, list(self.weight_divergence.keys())[i])
-                                   , dv, global_step=round_, walltime=None)
+            if layer_info:
+                self.writer.add_scalar("{} wdv layer {}".format(self.cid, list(self.weight_divergence.keys())[i])
+                                       , dv, global_step=round_, walltime=None)
         dvs = sum(dvs) / len(dvs)
-        self.writer.add_scalar("{} wdv avg".format(self.cid), dvs, global_step=round_, walltime=None)
+        if layer_info:
+            self.writer.add_scalar("{} wdv avg".format(self.cid), dvs, global_step=round_, walltime=None)
 
         if weight_distribution:
             measurement_max = 2
