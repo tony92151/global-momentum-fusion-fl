@@ -129,6 +129,6 @@ MODELS_TABLE = {
 def MODELS(config: Configer = None):
     if config is None:
         raise ValueError("config shouldn't be none")
-    if config.trainer.get_model() not in MODELS.keys():
-        raise ValueError("model not define in {}".format(MODELS.keys()))
+    if config.trainer.get_model() not in MODELS_TABLE.keys():
+        raise ValueError("model not define in {}".format(MODELS_TABLE.keys()))
     return MODELS_TABLE[config.trainer.get_model()]

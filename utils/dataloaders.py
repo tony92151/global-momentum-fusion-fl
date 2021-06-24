@@ -293,6 +293,6 @@ def DATALOADER(config: Configer = None):
                                               batch_size=config.trainer.get_local_bs(),
                                               clients=config.general.get_nodes())
 
-    print("Total train images: {}".format(len(dataloaders["train"].dataset)))
-    print("Total test images: {}".format(len(dataloaders["test"].dataset)))
+    print("Total train data: {}".format(len(dataloaders["train"].dataset)))
+    print("Total test data: {}".format(len(dataloaders["test"].dataset)))
     return dataloaders

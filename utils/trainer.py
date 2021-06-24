@@ -21,7 +21,6 @@ from utils.opti import SERVEROPT
 from utils.aggregator import set_gradient
 from torch_optimizer import Yogi
 
-
 class trainer:
     def __init__(self, config=None, dataloader=None, dataloader_iid=None, device=torch.device("cpu"), cid=-1,
                  writer=None,
