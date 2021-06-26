@@ -13,10 +13,14 @@ from tqdm import tqdm
 from globalfusion.warmup import warmup
 from utils.aggregator import aggregater, decompress, get_serialize_size
 from utils.configer import Configer
-from utils.dataloaders import cifar_dataloaders, femnist_dataloaders,DATALOADER
+from utils.dataloaders import cifar_dataloaders, femnist_dataloaders, DATALOADER
 from utils.eval import evaluater
 from utils.models import MODELS
 from utils.trainer import trainer
+
+from fedml.fedml_api.model.cv.resnet import resnet56
+from fedml.fedml_api.standalone.fedavg.fedavg_api import FedAvgAPI
+from fedml.fedml_api.standalone.fedavg.my_model_trainer_classification import MyModelTrainer as MyModelTrainerCLS
 
 torch.manual_seed(0)
 
@@ -30,15 +34,112 @@ def init_writer(tbpath):
     return writer
 
 
-def run(job, arg):
-    return job(arg)
+def add_args(parser):
+    """
+    parser: argparse.ArgumentParser
+    return a
+    parser
+    added
+    with args required by fit
+    """
+    # Training settings
+    parser.add_argument('--model', type=str, default='resnet56', metavar='N',
+                        help='neural network used in training')
+
+    parser.add_argument('--dataset', type=str, default='cifar10', metavar='N',
+                        help='dataset used for training')
+
+    parser.add_argument('--data_dir', type=str, default='./../../../data/cifar10',
+                        help='data directory')
+
+    parser.add_argument('--partition_method', type=str, default='hetero', metavar='N',
+                        help='how to partition the dataset on local workers')
+
+    parser.add_argument('--partition_alpha', type=float, default=0.5, metavar='PA',
+                        help='partition alpha (default: 0.5)')
+
+    parser.add_argument('--batch_size', type=int, default=128, metavar='N',
+                        help='input batch size for training (default: 64)')
+
+    parser.add_argument('--client_optimizer', type=str, default='adam',
+                        help='SGD with momentum; adam')
+
+    parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
+                        help='learning rate (default: 0.001)')
+
+    parser.add_argument('--wd', help='weight decay parameter;', type=float, default=0.001)
+
+    parser.add_argument('--epochs', type=int, default=5, metavar='EP',
+                        help='how many epochs will be trained locally')
+
+    parser.add_argument('--client_num_in_total', type=int, default=10, metavar='NN',
+                        help='number of workers in a distributed cluster')
+
+    parser.add_argument('--client_num_per_round', type=int, default=10, metavar='NN',
+                        help='number of workers')
+
+    parser.add_argument('--comm_round', type=int, default=10,
+                        help='how many round of communications we shoud use')
+
+    parser.add_argument('--frequency_of_the_test', type=int, default=5,
+                        help='the frequency of the algorithms')
+
+    parser.add_argument('--gpu', type=int, default=0,
+                        help='gpu')
+
+    parser.add_argument('--ci', type=int, default=0,
+                        help='CI')
+    return parser
+
+
+def load_data(dataloaders):
+    # dataloaders["test"]: single loader
+    # dataloaders["train"]: single loader
+    # dataloaders["train_s"]: loaders
+    # dataloaders["test_s"]: loaders
+    # dataloaders["train_s_iid"]: loaders with iid data
+
+    train_data_num = len(dataloaders["train"].dataset)
+    test_data_num = len(dataloaders["test"].dataset)
+    train_data_global = dataloaders["train"]
+    test_data_global = dataloaders["test"]
+    train_data_local_num_dict = dict()
+    for i, loader in enumerate(dataloaders["train_s"]):
+        train_data_local_num_dict[i] = len(loader.dataset)
+
+    train_data_local_dict = dict()
+    test_data_local_dict = dict()
+
+    for i, loader in enumerate(dataloaders["train_s"]):
+        train_data_local_dict[i] = loader
+    for i, loader in enumerate(dataloaders["test_s"]):
+        test_data_local_dict[i] = loader
+    class_num = 10
+    # train_data_num:               number of total train data
+    # test_data_num:                number of total test data
+    # train_data_global:            train data -> [[batch0_0, batch0_1,...], [batch1_0, batch1_1,...],...]
+    # test_data_global:             test data -> [[batch0_0, batch0_1,...], [batch1_0, batch1_1,...],...]
+    # train_data_local_num_dict:    total number of total train data in each clients -> {0: 10, 1:20,...}
+    # train_data_local_dict:        train data -> {0: [[batch0_0, batch0_1,...],...], 1:[[batch0_0, batch0_1,...],...],...}
+    # test_data_local_dict:         test data -> {0: [[batch0_0, batch0_1,...],...], 1:[[batch0_0, batch0_1,...],...],...}
+    # class_num:                    ->10
+    dataset = [train_data_num, test_data_num, train_data_global, test_data_global,
+               train_data_local_num_dict, train_data_local_dict, test_data_local_dict, class_num]
+    return dataset
+
+
+def create_model(model_name, output_dim):
+    pass
+
+
+def custom_model_trainer(model):
+    return MyModelTrainerCLS(model)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', help="path to config", type=str, default=None)
     parser.add_argument('--output', help="output", type=str, default=None)
-    parser.add_argument('--pool', help="Multiprocess Worker Pools", type=str, default="-1")
     parser.add_argument('--gpu', help="GPU usage. ex: 0,1,2", type=str, default="0")
     args = parser.parse_args()
 
@@ -56,16 +157,8 @@ if __name__ == '__main__':
     else:
         print("\nGPU usage: {}".format(gpus))
 
-    print("Read cinfig at : {}".format(con_path))
+    print("Read config at : {}".format(con_path))
     config = Configer(con_path)
-
-    num_pool = args.pool
-    if num_pool == "auto":
-        num_pool = int(config.general.get_nodes() / 2) + 5
-        print("\nPool: {}".format(num_pool))
-    else:
-        num_pool = int(num_pool)
-        print("\nPool: {}".format(num_pool))
 
     tb_path = os.path.join(config.general.get_tbpath(),
                            str(int(time.time()))) if config.general.get_tbpath() == "./tblogs" \
@@ -73,168 +166,17 @@ if __name__ == '__main__':
 
     writer = init_writer(tbpath=os.path.abspath(tb_path))
 
-    w = warmup(start_lr=config.trainer.get_start_lr(),
-               max_lr=config.trainer.get_max_lr(),
-               min_lr=config.trainer.get_min_lr(),
-               base_step=config.trainer.get_base_step(),
-               end_step=config.trainer.get_end_step())
-
     print("\nInit dataloader...")
     dataloaders = DATALOADER(config)
+    dataset = load_data(args, dataloaders)
+
+    print("\nInit model...")
+    model = MODELS(config)()
 
     # Init trainers
     print("\nInit trainers...")
-    print("Nodes: {}".format(config.general.get_nodes()))
-    trainers = []
-    if config.trainer.get_dataset_type() == "niid":
-        train_d = dataloaders["train_s"]
-        print("\nUse non-iid dataloader...")
-    else:
-        train_d = dataloaders["train_s_iid"]
-        print("\nUse iid dataloader...")
-    for i in tqdm(range(config.general.get_nodes())):
-        trainers.append(trainer(config=config,
-                                device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
-                                dataloader=train_d[i],
-                                dataloader_iid=dataloaders["train_s_iid"][i],
-                                cid=i,
-                                writer=writer,
-                                warmup=w))
+    model_trainer = custom_model_trainer(model)
 
-    print("\nInit model...")
-    net = MODELS(config)()
-
-    for tr in trainers:
-        tr.set_mdoel(net)
-
-    # Init trainers evaluater
-    ev = evaluater(config=config, dataloader=dataloaders["test"], device=torch.device("cuda:{}".format(gpus[0])),
-                   writer=None)
-
-    # inint traffic simulator
-    traffic = 0
-    traffic += get_serialize_size(net) * 4  # 4 clients download
-    # train
     print("\nStart training...")
-    if not num_pool == -1:
-        executor = ThreadPoolExecutor(max_workers=num_pool)
-    for epoch in tqdm(range(config.trainer.get_max_iteration())):
-        gs = []
-
-        ####################################################################################################
-        ####################################################################################################
-        if not num_pool == -1:
-            # training
-            futures = []
-            for tr in trainers:
-                futures.append(executor.submit(tr.train_run, epoch))
-            for future in as_completed(futures):
-                pass
-            del futures
-
-            for tr in trainers:
-                gs.append(tr.last_gradient)
-
-            traffic += get_serialize_size(gs) * 2  # 4 clients upload and aggregator download download
-
-            # decompress
-            result = executor.map(decompress, [gs[i]["gradient"] for i in range(len(gs))])
-            result = [i for i in result]
-            for i in range(len(gs)):
-                gs[i]["gradient"] = result[i]
-
-            # aggregate
-            rg = aggregater(gs, device=torch.device("cuda:{}".format(gpus[0])), aggrete_bn=False)
-
-            # one-step update
-            futures_ = []
-            for tr in trainers:
-                tr.round = epoch
-                futures_.append(executor.submit(tr.opt_step_base_model, rg))
-            for future in as_completed(futures_):
-                pass
-            del futures_
-
-            # test
-            test_acc = []
-            test_loss = []
-            ev.round = epoch
-            # executor = ThreadPoolExecutor(max_workers=num_pool)
-            evl_models = [copy.deepcopy(tr.last_model) for tr in trainers]
-            result = executor.map(ev.eval_run, evl_models)
-            for acc, loss in result:
-                test_acc.append(acc)
-                test_loss.append(loss)
-            del evl_models
-        ####################################################################################################
-        else:
-            for i, tr in zip(range(len(trainers)), trainers):
-                _ = tr.train_run(round_=epoch)
-                gs.append(tr.last_gradient)
-
-            traffic += get_serialize_size(gs) * 2  # 4 clients upload and aggregator download download
-
-            for i in range(len(gs)):
-                gs[i]["gradient"] = decompress(gs[i]["gradient"], device=torch.device("cuda:0"))
-
-            rg = aggregater(gs, device=torch.device("cuda:0"), aggrete_bn=False)
-
-            for tr in trainers:
-                tm = tr.opt_step_base_model(round_=epoch, base_gradient=rg)
-
-            test_acc = []
-            test_loss = []
-            for tr in trainers:
-                acc, loss = ev.eval_run(model=copy.deepcopy(tr.last_model), round_=epoch)
-                test_acc.append(acc)
-                test_loss.append(loss)
-        ####################################################################################################
-        ####################################################################################################
-        for tr in trainers:
-            tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=rg,
-                        compare_with="momentum", mask=False, weight_distribution=False, layer_info=False)
-            # ["iid", "momentum", "agg"]
-
-        test_acc = sum(test_acc) / len(test_acc)
-        test_loss = sum(test_loss) / len(test_loss)
-        writer.add_scalar("test loss", test_loss, global_step=epoch, walltime=None)
-        writer.add_scalar("test acc", test_acc, global_step=epoch, walltime=None)
-        writer.add_scalar("traffic(MB)", traffic, global_step=epoch, walltime=None)
-
-        traffic += get_serialize_size(rg) * 4  # 4 clients download
-
-        l = 0.0
-        ls = []
-        for k in list(trainers[0].weight_divergence.keys()):
-            l = [tr.weight_divergence[k].cpu() for tr in trainers]
-            l = sum(l) / len(l)
-            ls.append(l)
-            writer.add_scalar("wdv client_avg layer {}".format(k), l, global_step=epoch, walltime=None)
-
-        writer.add_scalar("wdv client_avg", sum(ls) / len(ls), global_step=epoch, walltime=None)
-
-    if not num_pool == -1:
-        executor.shutdown(True)
-    # save result
-    result_path = os.path.join(out_path, "result.json")
-    if not os.path.isfile(result_path):
-        f = open(result_path, 'w')
-        json.dump({}, f)
-        f.close()
-
-    file_ = open(result_path, 'r')
-    context = json.load(file_)
-    file_.close()
-
-    name = tb_path.split("/")[-1]
-    if name not in context.keys():
-        context[name] = [{"test_acc": test_acc, "test loss": test_loss}]
-    else:
-        context[name].append({"test_acc": test_acc, "test loss": test_loss})
-
-    f = open(result_path, 'w')
-    json.dump(context, f, indent=4)
-    f.close()
-
-    time.sleep(30)
-    print("Done")
+    fedavgAPI = FedAvgAPI(dataset, torch.device("cuda:{}".format(gpus[0])), args, model_trainer)
+    fedavgAPI.train()
