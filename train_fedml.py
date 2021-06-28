@@ -1,7 +1,7 @@
 import argparse
 import copy
 import json
-import os
+import os, sys
 import time
 from concurrent.futures import as_completed
 from bounded_pool_executor import BoundedThreadPoolExecutor as ThreadPoolExecutor
@@ -18,9 +18,11 @@ from utils.eval import evaluater
 from utils.models import MODELS
 from utils.trainer import trainer
 
-from fedml.fedml_api.model.cv.resnet import resnet56
-from fedml.fedml_api.standalone.fedavg.fedavg_api import FedAvgAPI
-from fedml.fedml_api.standalone.fedavg.my_model_trainer_classification import MyModelTrainer as MyModelTrainerCLS
+sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../")))
+import wandb
+from FedML.fedml_api.model.cv.resnet import resnet56
+from FedML.fedml_api.standalone.fedavg.fedavg_api import FedAvgAPI
+from FedML.fedml_api.standalone.fedavg.my_model_trainer_classification import MyModelTrainer as MyModelTrainerCLS
 
 torch.manual_seed(0)
 
@@ -67,19 +69,6 @@ def add_args(parser):
     parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
                         help='learning rate (default: 0.001)')
 
-    parser.add_argument('--wd', help='weight decay parameter;', type=float, default=0.001)
-
-    parser.add_argument('--epochs', type=int, default=5, metavar='EP',
-                        help='how many epochs will be trained locally')
-
-    parser.add_argument('--client_num_in_total', type=int, default=10, metavar='NN',
-                        help='number of workers in a distributed cluster')
-
-    parser.add_argument('--client_num_per_round', type=int, default=10, metavar='NN',
-                        help='number of workers')
-
-    parser.add_argument('--comm_round', type=int, default=10,
-                        help='how many round of communications we shoud use')
 
     parser.add_argument('--frequency_of_the_test', type=int, default=5,
                         help='the frequency of the algorithms')
@@ -112,8 +101,8 @@ def load_data(dataloaders):
 
     for i, loader in enumerate(dataloaders["train_s"]):
         train_data_local_dict[i] = loader
-    for i, loader in enumerate(dataloaders["test_s"]):
-        test_data_local_dict[i] = loader
+    for i, loader in enumerate(dataloaders["train_s"]):
+        test_data_local_dict[i] = dataloaders["test"]
     class_num = 10
     # train_data_num:               number of total train data
     # test_data_num:                number of total test data
@@ -140,7 +129,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', help="path to config", type=str, default=None)
     parser.add_argument('--output', help="output", type=str, default=None)
-    parser.add_argument('--gpu', help="GPU usage. ex: 0,1,2", type=str, default="0")
+    # parser.add_argument('--gpu', help="GPU usage. ex: 0,1,2", type=str, default="0")
+
+    add_args(parser)
     args = parser.parse_args()
 
     if args.config is None or args.output is None:
@@ -151,11 +142,11 @@ if __name__ == '__main__':
     out_path = os.path.abspath(args.output)
     os.makedirs(out_path, exist_ok=True)
 
-    gpus = [int(i) for i in args.gpu.split(",")]
-    if len(gpus) > torch.cuda.device_count() or max(gpus) > torch.cuda.device_count():
-        raise ValueError("GPU unavailable.")
-    else:
-        print("\nGPU usage: {}".format(gpus))
+    # gpus = [int(i) for i in args.gpu.split(",")]
+    # if len(gpus) > torch.cuda.device_count() or max(gpus) > torch.cuda.device_count():
+    #     raise ValueError("GPU unavailable.")
+    # else:
+    #     print("\nGPU usage: {}".format(gpus))
 
     print("Read config at : {}".format(con_path))
     config = Configer(con_path)
@@ -168,15 +159,22 @@ if __name__ == '__main__':
 
     print("\nInit dataloader...")
     dataloaders = DATALOADER(config)
-    dataset = load_data(args, dataloaders)
+    dataset = load_data(dataloaders)
 
     print("\nInit model...")
-    model = MODELS(config)()
+    # model = MODELS(config)()
+    model = resnet56(class_num=10)
 
     # Init trainers
     print("\nInit trainers...")
     model_trainer = custom_model_trainer(model)
 
+    wandb.init(
+        project="fedml",
+        name="FedAVG-r" + str(args.comm_round) + "-e" + str(args.epochs) + "-lr" + str(args.lr) + "single",
+        config=args
+    )
+
     print("\nStart training...")
-    fedavgAPI = FedAvgAPI(dataset, torch.device("cuda:{}".format(gpus[0])), args, model_trainer)
+    fedavgAPI = FedAvgAPI(dataset, torch.device("cuda:{}".format(args.gpu)), args, model_trainer)
     fedavgAPI.train()

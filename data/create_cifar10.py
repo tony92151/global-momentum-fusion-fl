@@ -26,6 +26,10 @@ def unpickle(files):
     for d in range(len(data)):
         data_index[data[d]].append(d)
 
+    # data_c: [[(labels, data, filenames, idx),(),...], [(labels, data, filenames, idx),(),...],... (10 classes)]
+    #           |______________class0_______________|    |______________class1_______________|
+    # data_index: [[21,74,6,787,4741,...], [211,7,64,987,8774,...],...(10 classes)]
+    #              |_______class0_______|  |_______class1_______|
     return data_c, data_index
 
 
@@ -34,15 +38,18 @@ def pickling(f, value):
         pickle.dump(value, fo)
 
 
-def divide_part(vlaue, parts):
-    vlaue = copy.deepcopy(vlaue)
-    # random.shuffle(vlaue)
+def divide_part(value, parts):
+    # [value1, value2, ...]
+    vlaue = copy.deepcopy(value)
+    # random.shuffle(value)
     c = 0
     d = [[] for i in range(parts)]
     for i in vlaue:
         d[c % parts].append(i)
         c += 1
     random.shuffle(d)
+    # [[value0, value21, value1876,...], [value7527, value123, value74,...],...(%n parts)]
+    #   |___________part0____________|    |____________part1____________|
     return d
 
 
@@ -68,6 +75,11 @@ if __name__ == '__main__':
     paths = [os.path.join(path, i) for i in cifar_path]
     data, data_index = unpickle(paths)
 
+    # data: [[(labels, data, filenames, idx),(),...], [(labels, data, filenames, idx),(),...],... (10 classes)]
+    #         |______________class0_______________|    |______________class1_______________|
+    # data_index: [[21,74,6,787,4741,...], [211,7,64,987,8774,...],...(10 classes)]
+    #              |_______class0_______|  |_______class1_______|
+
     os.makedirs(os.path.join(path, "iid"), exist_ok=True)
     os.makedirs(os.path.join(path, "niid"), exist_ok=True)
 
@@ -85,7 +97,7 @@ if __name__ == '__main__':
     clients_json = {}
 
     for i in range(len(chunks)):
-        clients_json["{}".format(i)] = [d[3] for d in chunks[i]]
+        clients_json[str(i)] = [d[3] for d in chunks[i]]
 
     with open(os.path.join(path, "iid", "index.json"), 'w') as fo:
         json.dump(clients_json, fo)
