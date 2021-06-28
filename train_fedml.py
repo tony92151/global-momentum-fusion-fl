@@ -159,6 +159,11 @@ if __name__ == '__main__':
 
     print("\nInit dataloader...")
     dataloaders = DATALOADER(config)
+    if config.trainer.get_dataset_type() == "iid":
+        dataloaders["train_s"] = dataloaders["train_s_iid"]
+        print("\nUse iid dataloader...")
+    else:
+        print("\nUse non-iid dataloader...")
     dataset = load_data(dataloaders)
 
     print("\nInit model...")
