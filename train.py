@@ -81,21 +81,20 @@ if __name__ == '__main__':
 
     print("\nInit dataloader...")
     dataloaders = DATALOADER(config)
+    if config.trainer.get_dataset_type() == "iid":
+        dataloaders["train_s"] = dataloaders["train_s_iid"]
+        print("\nUse iid dataloader...")
+    else:
+        print("\nUse non-iid dataloader...")
 
     # Init trainers
     print("\nInit trainers...")
     print("Nodes: {}".format(config.general.get_nodes()))
     trainers = []
-    if config.trainer.get_dataset_type() == "niid":
-        train_d = dataloaders["train_s"]
-        print("\nUse non-iid dataloader...")
-    else:
-        train_d = dataloaders["train_s_iid"]
-        print("\nUse iid dataloader...")
     for i in tqdm(range(config.general.get_nodes())):
         trainers.append(trainer(config=config,
                                 device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
-                                dataloader=train_d[i],
+                                dataloader=dataloaders["train_s"][i],
                                 dataloader_iid=dataloaders["train_s_iid"][i],
                                 cid=i,
                                 writer=writer,
