@@ -47,8 +47,6 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     context2 = json.load(file_)
     file_.close()
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
-
     trainloaders_iid = []
     for i in range(len(context2.keys())):
         trainloaders_iid.append(torch.utils.data.DataLoader(trainset,
