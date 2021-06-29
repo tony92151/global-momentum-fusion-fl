@@ -17,7 +17,7 @@ import numpy as np
 from globalfusion.gfcompressor import GFCCompressor
 from globalfusion.optimizer import GFDGCSGD
 from utils.configer import Configer
-from utils.opti import SERVEROPT
+from utils.opti import SERVEROPTS, FEDOPTS
 from utils.aggregator import set_gradient
 from torch_optimizer import Yogi
 
@@ -40,6 +40,8 @@ class trainer:
         self.training_loss = 0
         self.warmup = warmup
         self.optimizer: GFDGCSGD = None
+
+        self.last_onestep_state = None
 
         self.weight_divergence = None
         if self.config.trainer.get_lossfun() == "crossentropy":
@@ -74,18 +76,27 @@ class trainer:
         if self.cid == 0 and self.writer is not None:
             self.writer.add_scalar("Compress ratio", cr, global_step=round_, walltime=None)
             self.writer.add_scalar("Fusion ratio", fr, global_step=round_, walltime=None)
-        optimizer = GFDGCSGD(params=model.parameters(),
-                             lr=lr,
-                             momentum=0.9,
-                             cid=self.cid,
-                             weight_decay=1e-4,
-                             nesterov=True,
-                             dgc_momentum=self.config.dgc.get_momentum(),
-                             compress_ratio=cr,
-                             fusing_ratio=fr,
-                             checkpoint=False,
-                             device=self.device,
-                             pool=None)
+
+        optimizer = FEDOPTS(config=self.config, params=model.parameters(), lr=lr,
+                            cid=self.cid,
+                            dgc_momentum=self.config.dgc.get_momentum(),
+                            compress_ratio=cr,
+                            fusing_ratio=fr,
+                            checkpoint=False,
+                            device=self.device,
+                            pool=None)
+        # optimizer = GFDGCSGD(params=model.parameters(),
+        #                      lr=lr,
+        #                      momentum=0.9,
+        #                      cid=self.cid,
+        #                      weight_decay=1e-4,
+        #                      nesterov=True,
+        #                      dgc_momentum=self.config.dgc.get_momentum(),
+        #                      compress_ratio=cr,
+        #                      fusing_ratio=fr,
+        #                      checkpoint=False,
+        #                      device=self.device,
+        #                      pool=None)
 
         if self.last_state is not None:
             optimizer.set_state(self.last_state)
@@ -108,7 +119,7 @@ class trainer:
             losses = sum(losses) / len(losses)
             eploss.append(losses)
 
-        optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
+        optimizer.set_accumulate_gradient(model=model, record_batchnorm=False)
         self.print_("trainer >> cid: {} >> compress, {}".format(self.cid, time.time()))
         ############################################################
         if self.config.dgc.get_dgc():
@@ -279,7 +290,9 @@ class trainer:
 
         model.to(self.device).train()
         opt = self.config.agg.get_optimizer()
-        optimizer = SERVEROPT[opt](params=model.parameters(), lr=lr)
+        optimizer = SERVEROPTS(config=self.config, params=model.parameters(), lr=lr)
+        if self.last_onestep_state is not None:
+            optimizer.load_state_dict(self.last_onestep_state)
         # optimizer = GFDGCSGD(params=model.parameters(), lr=lr, device=self.device)
         base_gradient["gradient"] = [t.to(self.device) for t in base_gradient["gradient"]]
         # optimizer.one_step(base_gradient["gradient"])
@@ -295,6 +308,7 @@ class trainer:
                     idx += 3
         self.last_model = copy.deepcopy(model)
         self.last_de_gradient = copy.deepcopy(base_gradient)
+        self.last_onestep_state = optimizer.state_dict()
         if round_ >= self.config.trainer.get_base_step() - 1:
             self.update_global_momentum()
         return

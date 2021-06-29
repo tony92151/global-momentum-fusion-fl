@@ -45,6 +45,13 @@ class config_trainer:
     def get_optimizer(self):
         return self.config["optimizer"]
 
+    def get_optimizer_args(self) -> dict:
+        try:
+            args = eval(self.config["optimizer_args"])
+        except KeyError:
+            args = {}
+        return args
+
     def get_lossfun(self):
         return self.config["lossfun"]
 
@@ -91,6 +98,13 @@ class config_agg:
         if self.config["optimizer"] not in opts:
             raise ValueError("Optimizer in aggregator should in {}".format(opts))
         return self.config["optimizer"]
+
+    def get_optimizer_args(self) -> dict:
+        try:
+            args = eval(self.config["optimizer_args"])
+        except KeyError:
+            args = {}
+        return args
 
 
 class Configer:
