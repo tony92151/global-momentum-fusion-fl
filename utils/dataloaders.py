@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data import SubsetRandomSampler
 import torch.multiprocessing
 from utils.configer import Configer
+from PIL import Image
 
 # torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -40,21 +41,16 @@ SubsetSampler = SubsetSequentialSampler
 # This problem
 # I can't figure out how to resolve this problem by fix seed under multi-thread training.
 ##################################################################
-class CIFARDataset(Dataset):
+class CIFARDataset(torchvision.datasets.CIFAR10):
     def __init__(self, feature, target, transform=None):
-        self.X = []
-        self.Y = target
-        if transform is not None:
-            for i in range(len(feature)):
-                self.X.append(transform(feature[i]))
-        else:
-            self.X = feature
+        super(CIFARDataset, self).__init__(feature, target, transform)
+        if self.transform is not None:
+            self.transformed_data = [self.transform(Image.fromarray(img)) for img in self.data]
 
-    def __len__(self):
-        return len(self.X)
+    def __getitem__(self, index: int):
+        img, target = self.transformed_data[index], self.targets[index]
+        return img, target
 
-    def __getitem__(self, idx):
-        return self.X[idx], self.Y[idx]
 
 
 def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.json", batch_size=128, show=True):
@@ -73,11 +69,9 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     # but don't use it as main datasets.
     # Because it does some random stuff in transform while calling by dataloader, which lead no reproducibility.
     # "CIFARDataset" will do transform while initializing.
-    trainset_ = torchvision.datasets.CIFAR10(root=root, train=True, download=True)
-    trainset = CIFARDataset(trainset_.data, trainset_.targets, transform_train)
+    trainset = CIFARDataset(root=root, train=True, download=True, transform=transform_train)
 
-    testset_ = torchvision.datasets.CIFAR10(root=root, train=False, download=True)
-    testset = CIFARDataset(testset_.data, testset_.targets, transform_test)
+    testset = CIFARDataset(root=root, train=False, download=True, transform=transform_train)
     ################################################################################################
     file_ = open(index_path.replace("datatype", "niid"), 'r')
     context = json.load(file_)
