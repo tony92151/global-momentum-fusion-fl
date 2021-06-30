@@ -9,7 +9,35 @@ from torch.utils.data import SubsetRandomSampler
 import torch.multiprocessing
 from utils.configer import Configer
 
-torch.multiprocessing.set_sharing_strategy('file_system')
+# torch.multiprocessing.set_sharing_strategy('file_system')
+
+##################################################################
+from torch.utils.data.sampler import Sampler
+from typing import Sequence
+
+
+# copy from torch/utils/datai/sampler.py
+class SubsetSequentialSampler:
+    indices: Sequence[int]
+
+    def __init__(self, indices: Sequence[int], generator=None) -> None:
+        self.indices = indices
+        self.generator = generator
+
+    def __iter__(self):
+        # return (self.indices[i] for i in torch.randperm(len(self.indices), generator=self.generator))
+        return (self.indices[i] for i in range(len(self.indces)))
+
+    def __len__(self):
+        return len(self.indices)
+
+
+SubsetSampler = SubsetSequentialSampler
+# SubsetSampler = SubsetRandomSampler
+# "SubsetRandomSampler" will shuffle data every iterator, which lead no reproducibility.
+# This problem
+# I can't figure out how to resolve this problem by fix seed under multi-thread training.
+##################################################################
 
 
 def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.json", batch_size=128, show=True):
@@ -39,7 +67,7 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     for i in range(len(context.keys())):
         trainloaders.append(torch.utils.data.DataLoader(trainset,
                                                         batch_size=batch_size,
-                                                        sampler=torch.utils.data.SubsetRandomSampler(context[str(i)])))
+                                                        sampler=SubsetSampler(context[str(i)])))
 
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=True)
     ################################################################################################
@@ -51,8 +79,7 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     for i in range(len(context2.keys())):
         trainloaders_iid.append(torch.utils.data.DataLoader(trainset,
                                                             batch_size=batch_size,
-                                                            sampler=torch.utils.data.SubsetRandomSampler(
-                                                                context2[str(i)])))
+                                                            sampler=SubsetSampler(context2[str(i)])))
     ################################################################################################
     if show:
         for j in range(len(context.keys())):
@@ -82,6 +109,8 @@ class MNISTDataset(Dataset):
         if transform is not None:
             for i in range(len(feature)):
                 self.X.append(transform(feature[i]))
+        else:
+            self.X
 
     def __len__(self):
         return len(self.X)
@@ -124,7 +153,7 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     trainloaders = [torch.utils.data.DataLoader(
         train_dataset,
         batch_size=batch_size,
-        sampler=SubsetRandomSampler(train_idx[i]))
+        sampler=SubsetSampler(train_idx[i]))
         for i in range(len(train_idx))]
 
     trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -144,7 +173,7 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     testloaders = [torch.utils.data.DataLoader(
         test_dataset,
         batch_size=batch_size,
-        sampler=SubsetRandomSampler(test_idx[i]))
+        sampler=SubsetSampler(test_idx[i]))
         for i in range(len(test_idx))]
 
     testloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
@@ -159,7 +188,7 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     trainloaders_iid = [torch.utils.data.DataLoader(
         train_dataset_iid,
         batch_size=batch_size,
-        sampler=SubsetRandomSampler(train_idx[i]))
+        sampler=SubsetSampler(train_idx[i]))
         for i in range(len(train_idx))]
 
     # test: single loader
@@ -218,7 +247,7 @@ def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     trainloaders = [torch.utils.data.DataLoader(
         train_dataset,
         batch_size=batch_size,
-        sampler=SubsetRandomSampler(train_idx[i]))
+        sampler=SubsetSampler(train_idx[i]))
         for i in range(len(train_idx))]
 
     trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -237,7 +266,7 @@ def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     testloaders = [torch.utils.data.DataLoader(
         test_dataset,
         batch_size=batch_size,
-        sampler=SubsetRandomSampler(test_idx[i]))
+        sampler=SubsetSampler(test_idx[i]))
         for i in range(len(test_idx))]
 
     testloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
@@ -251,7 +280,7 @@ def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     trainloaders_iid = [torch.utils.data.DataLoader(
         train_dataset_iid,
         batch_size=batch_size,
-        sampler=SubsetRandomSampler(train_idx[i]))
+        sampler=SubsetSampler(train_idx[i]))
         for i in range(len(train_idx))]
 
     # test: single loader

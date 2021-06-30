@@ -46,14 +46,14 @@ def FEDOPTS(config: Configer = None, params=None, lr=None, **kwargs):
         raise ValueError("lr shouldn't be none")
     if config.trainer.get_optimizer() not in FEDOPT.keys():
         raise ValueError("model not define in {}".format(FEDOPT.keys()))
-    args = config.agg.get_optimizer_args()
+    args = config.trainer.get_optimizer_args()
     args.update(kwargs)
     try:
-        opt = FEDOPT[config.agg.get_optimizer()](params=params, lr=lr, **args)
+        opt = FEDOPT[config.trainer.get_optimizer()](params=params, lr=lr, **args)
     except TypeError:
         print("[Warning] Error arguments:\"{}\" for optimizer:\"{}\", using default setting.".format(
             args, config.trainer.get_optimizer()))
-        opt = FEDOPT[config.agg.get_optimizer()](params=params, lr=lr)
+        opt = FEDOPT[config.trainer.get_optimizer()](params=params, lr=lr)
     return opt
 
 #
