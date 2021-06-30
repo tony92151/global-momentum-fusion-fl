@@ -76,6 +76,7 @@ class trainer:
         if self.cid == 0 and self.writer is not None:
             self.writer.add_scalar("Compress ratio", cr, global_step=round_, walltime=None)
             self.writer.add_scalar("Fusion ratio", fr, global_step=round_, walltime=None)
+            self.writer.add_scalar("Learning rate", lr, global_step=round_, walltime=None)
 
         optimizer = FEDOPTS(config=self.config, params=model.parameters(), lr=lr,
                             cid=self.cid,
