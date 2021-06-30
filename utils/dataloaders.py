@@ -26,7 +26,7 @@ class SubsetSequentialSampler:
 
     def __iter__(self):
         # return (self.indices[i] for i in torch.randperm(len(self.indices), generator=self.generator))
-        return (self.indices[i] for i in range(len(self.indces)))
+        return (self.indices[i] for i in range(len(self.indices)))
 
     def __len__(self):
         return len(self.indices)
@@ -61,7 +61,7 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     context = json.load(file_)
     file_.close()
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=False)
 
     trainloaders = []
     for i in range(len(context.keys())):
@@ -69,7 +69,7 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
                                                         batch_size=batch_size,
                                                         sampler=SubsetSampler(context[str(i)])))
 
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=True)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
     ################################################################################################
     file_ = open(index_path.replace("datatype", "iid"), 'r')
     context2 = json.load(file_)
@@ -156,7 +156,7 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
         sampler=SubsetSampler(train_idx[i]))
         for i in range(len(train_idx))]
 
-    trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
     #############################################################################
     test_data_all_x = []
     test_data_all_y = []
@@ -176,10 +176,11 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
         sampler=SubsetSampler(test_idx[i]))
         for i in range(len(test_idx))]
 
-    testloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+    testloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     # iid dataloaders
     idx = list(range(len(train_data_all_x)))
+    random.seed(0)
     random.shuffle(idx)
     new_train_data_all_x = [train_data_all_x[i] for i in idx]
     new_train_data_all_y = [train_data_all_y[i] for i in idx]
