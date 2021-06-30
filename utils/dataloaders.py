@@ -33,11 +33,28 @@ class SubsetSequentialSampler:
 
 
 SubsetSampler = SubsetSequentialSampler
+
+
 # SubsetSampler = SubsetRandomSampler
 # "SubsetRandomSampler" will shuffle data every iterator, which lead no reproducibility.
 # This problem
 # I can't figure out how to resolve this problem by fix seed under multi-thread training.
 ##################################################################
+class CIFARDataset(Dataset):
+    def __init__(self, feature, target, transform=None):
+        self.X = []
+        self.Y = target
+        if transform is not None:
+            for i in range(len(feature)):
+                self.X.append(transform(feature[i]))
+        else:
+            self.X = feature
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.Y[idx]
 
 
 def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.json", batch_size=128, show=True):
@@ -47,15 +64,20 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     ])
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
+        # transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
-    trainset = torchvision.datasets.CIFAR10(root=root, train=True,
-                                            download=True, transform=transform_train)
 
-    testset = torchvision.datasets.CIFAR10(root=root, train=False,
-                                           download=True, transform=transform_test)
+    # I use pytorch build-in function "torchvision.datasets.CIFAR10" to check whether data is exist,
+    # but don't use it as main datasets.
+    # Because it does some random stuff in transform while calling by dataloader, which lead no reproducibility.
+    # "CIFARDataset" will do transform while initializing.
+    trainset_ = torchvision.datasets.CIFAR10(root=root, train=True, download=True)
+    trainset = CIFARDataset(trainset_.data, trainset_.targets, transform_train)
+
+    testset_ = torchvision.datasets.CIFAR10(root=root, train=False, download=True)
+    testset = CIFARDataset(testset_.data, testset_.targets, transform_test)
     ################################################################################################
     file_ = open(index_path.replace("datatype", "niid"), 'r')
     context = json.load(file_)
@@ -110,7 +132,7 @@ class MNISTDataset(Dataset):
             for i in range(len(feature)):
                 self.X.append(transform(feature[i]))
         else:
-            self.X
+            self.X = feature
 
     def __len__(self):
         return len(self.X)
@@ -180,7 +202,6 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
 
     # iid dataloaders
     idx = list(range(len(train_data_all_x)))
-    random.seed(0)
     random.shuffle(idx)
     new_train_data_all_x = [train_data_all_x[i] for i in idx]
     new_train_data_all_y = [train_data_all_y[i] for i in idx]

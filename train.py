@@ -2,6 +2,7 @@ import argparse
 import copy
 import json
 import os
+import random
 import time
 from concurrent.futures import as_completed
 from bounded_pool_executor import BoundedThreadPoolExecutor as ThreadPoolExecutor
@@ -19,6 +20,7 @@ from utils.models import MODELS
 from utils.trainer import trainer
 
 torch.manual_seed(0)
+random.seed(0)
 
 
 def init_writer(tbpath):
