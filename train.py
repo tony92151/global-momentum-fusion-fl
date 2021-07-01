@@ -19,8 +19,9 @@ from utils.eval import evaluater
 from utils.models import MODELS
 from utils.trainer import trainer
 
-torch.manual_seed(0)
-random.seed(0)
+def set_seed(seed):
+    torch.manual_seed(seed)
+    random.seed(seed)
 
 
 def init_writer(tbpath):
@@ -121,6 +122,10 @@ if __name__ == '__main__':
         executor = ThreadPoolExecutor(max_workers=num_pool)
     for epoch in tqdm(range(config.trainer.get_max_iteration())):
         gs = []
+        # sample dataset
+        set_seed(epoch)
+        for tr in trainers:
+            tr.sample_data_from_dataloader()
 
         ####################################################################################################
         ####################################################################################################
@@ -161,12 +166,16 @@ if __name__ == '__main__':
             test_loss = []
             ev.round = epoch
             # executor = ThreadPoolExecutor(max_workers=num_pool)
-            evl_models = [copy.deepcopy(tr.last_model) for tr in trainers]
-            result = executor.map(ev.eval_run, evl_models)
-            for acc, loss in result:
-                test_acc.append(acc)
-                test_loss.append(loss)
-            del evl_models
+            set_seed(epoch+1000)
+            acc, loss = ev.eval_run(trainers[0].last_model)
+            test_acc.append(acc)
+            test_loss.append(loss)
+            # evl_models = [copy.deepcopy(tr.last_model) for tr in trainers]
+            # result = executor.map(ev.eval_run, evl_models)
+            # for acc, loss in result:
+            #     test_acc.append(acc)
+            #     test_loss.append(loss)
+            # del evl_models
         ####################################################################################################
         else:
             for i, tr in zip(range(len(trainers)), trainers):
@@ -185,10 +194,10 @@ if __name__ == '__main__':
 
             test_acc = []
             test_loss = []
-            for tr in trainers:
-                acc, loss = ev.eval_run(model=copy.deepcopy(tr.last_model), round_=epoch)
-                test_acc.append(acc)
-                test_loss.append(loss)
+            ev.round = epoch
+            acc, loss = ev.eval_run(model=trainers[0].last_model)
+            test_acc.append(acc)
+            test_loss.append(loss)
         ####################################################################################################
         ####################################################################################################
         for tr in trainers:

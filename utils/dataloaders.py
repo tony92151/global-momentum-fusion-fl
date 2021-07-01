@@ -9,7 +9,7 @@ from torch.utils.data import SubsetRandomSampler
 import torch.multiprocessing
 from utils.configer import Configer
 from PIL import Image
-
+import numpy as np
 # torch.multiprocessing.set_sharing_strategy('file_system')
 
 ##################################################################
@@ -18,22 +18,15 @@ from typing import Sequence
 
 
 # copy from torch/utils/datai/sampler.py
-class SubsetSequentialSampler:
-    indices: Sequence[int]
-
-    def __init__(self, indices: Sequence[int], generator=None) -> None:
-        self.indices = indices
-        self.generator = generator
+class SubsetSequentialSampler(SubsetRandomSampler):
+    def __init__(self, **kwargs) -> None:
+        super(CIFARDataset, self).__init__(**kwargs)
 
     def __iter__(self):
-        # return (self.indices[i] for i in torch.randperm(len(self.indices), generator=self.generator))
         return (self.indices[i] for i in range(len(self.indices)))
 
-    def __len__(self):
-        return len(self.indices)
 
-
-SubsetSampler = SubsetSequentialSampler
+SubsetSampler = SubsetRandomSampler
 
 
 # SubsetSampler = SubsetRandomSampler
@@ -42,15 +35,16 @@ SubsetSampler = SubsetSequentialSampler
 # I can't figure out how to resolve this problem by fix seed under multi-thread training.
 ##################################################################
 class CIFARDataset(torchvision.datasets.CIFAR10):
-    def __init__(self, feature, target, transform=None):
-        super(CIFARDataset, self).__init__(feature, target, transform)
+    def __init__(self, **kwargs):
+        super(CIFARDataset, self).__init__(**kwargs)
+        self.transformed_data = None
         if self.transform is not None:
             self.transformed_data = [self.transform(Image.fromarray(img)) for img in self.data]
 
     def __getitem__(self, index: int):
-        img, target = self.transformed_data[index], self.targets[index]
+        img = self.transformed_data[index] if self.transformed_data is not None else self.data[index]
+        target = self.targets[index]
         return img, target
-
 
 
 def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.json", batch_size=128, show=True):
@@ -69,15 +63,15 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     # but don't use it as main datasets.
     # Because it does some random stuff in transform while calling by dataloader, which lead no reproducibility.
     # "CIFARDataset" will do transform while initializing.
-    trainset = CIFARDataset(root=root, train=True, download=True, transform=transform_train)
+    trainset = torchvision.datasets.CIFAR10(root=root, train=True, download=True, transform=transform_train)
 
-    testset = CIFARDataset(root=root, train=False, download=True, transform=transform_train)
+    testset = torchvision.datasets.CIFAR10(root=root, train=False, download=True, transform=transform_train)
     ################################################################################################
     file_ = open(index_path.replace("datatype", "niid"), 'r')
     context = json.load(file_)
     file_.close()
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=False)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
 
     trainloaders = []
     for i in range(len(context.keys())):

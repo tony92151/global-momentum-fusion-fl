@@ -21,6 +21,7 @@ from utils.opti import SERVEROPTS, FEDOPTS
 from utils.aggregator import set_gradient
 from torch_optimizer import Yogi
 
+
 class trainer:
     def __init__(self, config=None, dataloader=None, dataloader_iid=None, device=torch.device("cpu"), cid=-1,
                  writer=None,
@@ -43,6 +44,10 @@ class trainer:
 
         self.last_onestep_state = None
 
+        ####
+        self.sampled_data = None
+        ####
+
         self.weight_divergence = None
         if self.config.trainer.get_lossfun() == "crossentropy":
             self.loss_function = nn.CrossEntropyLoss()
@@ -60,6 +65,11 @@ class trainer:
         names = [i[0] for i in self.last_model.named_parameters()]
         for i in names:
             self.weight_divergence[i] = 0.0
+
+    def sample_data_from_dataloader(self):
+        self.sampled_data = []
+        for data, target in self.dataloader:
+            self.sampled_data.append((data, target))
 
     def train_run(self, round_, base_model=None):
         if base_model is None:
@@ -108,7 +118,7 @@ class trainer:
         self.print_("trainer >> cid: {} >> train start, {}".format(self.cid, time.time()))
         for i in range(self.config.trainer.get_local_ep()):
             losses = []
-            for data, target in self.dataloader:
+            for data, target in self.sampled_data:
                 data = data.to(self.device)
                 target = target.to(self.device)
                 optimizer.zero_grad()
@@ -156,16 +166,12 @@ class trainer:
                  weight_distribution=False, layer_info=False):
         if self.writer is None:
             raise ValueError("Tensorboard writer not define.")
-        types = ["iid", "momentum", "agg"]
+        types = ["momentum", "agg"]
         if compare_with is None or compare_with not in types:
             raise ValueError("compare_with should be {}".format(types))
         d_niid = gradients[self.cid]["gradient"]
 
-        if compare_with == "iid":
-            d_compare = self.train_run_iid(round_)
-            if mask:
-                self.mask(d_compare)
-        elif compare_with == "momentum":
+        if compare_with == "momentum":
             d_compare = self.global_momentum if self.global_momentum is not None else agg_gradient["gradient"]
             if mask:
                 self.mask(d_compare)
@@ -214,69 +220,6 @@ class trainer:
                 global_step=0)
             # self.last_model
             # self.last_de_gradient
-
-    def train_run_iid(self, round_, base_model=None):
-        if base_model is None:
-            model = copy.deepcopy(self.last_model)
-        else:
-            model = copy.deepcopy(base_model)
-
-        lr = self.warmup.get_lr_from_step(round_)
-        model.train().to(self.device)
-        chunk = self.config.trainer.get_max_iteration() / len(self.config.dgc.get_compress_ratio())
-        chunk_ = self.config.trainer.get_max_iteration() / len(self.config.gf.get_fusing_ratio())
-        cr = self.config.dgc.get_compress_ratio()[min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
-        fr = self.config.gf.get_fusing_ratio()[min(len(self.config.gf.get_fusing_ratio()), int(round_ / chunk_))]
-        optimizer = GFDGCSGD(params=model.parameters(),
-                             lr=lr,
-                             momentum=0.9,
-                             cid=self.cid,
-                             weight_decay=1e-4,
-                             nesterov=True,
-                             dgc_momentum=self.config.dgc.get_momentum(),
-                             compress_ratio=1.0,
-                             fusing_ratio=fr,
-                             checkpoint=False,
-                             device=self.device,
-                             pool=None)
-        if self.last_state is not None:
-            optimizer.set_state(self.last_state)
-        eploss = []
-        self.print_("trainer_iid >> cid: {} >> train start, {}".format(self.cid, time.time()))
-        for i in range(self.config.trainer.get_local_ep()):
-            losses = []
-            for data, target in self.dataloader_iid:
-                data = data.to(self.device)
-                target = target.to(self.device)
-                optimizer.zero_grad()
-                output = model(data.float())
-                loss = self.loss_function(output, target)
-                losses.append(loss.item())
-                loss.backward()
-                optimizer.step()
-            losses = sum(losses) / len(losses)
-            eploss.append(losses)
-
-        optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
-        self.print_("trainer_iid >> cid: {} >> compress, {}".format(self.cid, time.time()))
-        ############################################################
-        if self.config.dgc.get_dgc():
-            if not self.config.gf.get_global_fusion() or \
-                    (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
-                optimizer.compress(compress=True, momentum_correction=True)
-            else:
-                optimizer.compress(global_momentum=self.global_momentum, compress=True,
-                                   momentum_correction=True)
-        else:
-            optimizer.compress(compress=False, momentum_correction=False)
-        ############################################################
-        eploss = sum(eploss) / len(eploss)
-        # if self.writer is not None:
-        #     self.writer.add_scalar("loss of {}".format(self.cid), eploss, global_step=round_, walltime=None)
-        iid_last_gradient = copy.deepcopy(optimizer.get_compressed_gradient())
-        d_iid = optimizer.decompress(iid_last_gradient["gradient"])
-
-        return d_iid
 
     def opt_step_base_model(self, base_gradient=None, round_=None, base_model=None):
         self.print_("trainer >> cid: {} >> opt_step, {}".format(self.cid, time.time()))
