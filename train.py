@@ -104,6 +104,7 @@ if __name__ == '__main__':
                                 warmup=w))
 
     print("\nInit model...")
+    set_seed(123)
     net = MODELS(config)()
 
     for tr in trainers:
@@ -126,6 +127,7 @@ if __name__ == '__main__':
         set_seed(epoch)
         for tr in trainers:
             tr.sample_data_from_dataloader()
+        ev.sample_data_from_dataloader()
 
         ####################################################################################################
         ####################################################################################################
