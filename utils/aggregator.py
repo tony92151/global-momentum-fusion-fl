@@ -36,8 +36,9 @@ def aggregater(gradient_list, device=torch.device("cpu"), aggrete_bn=False):
     agg_gradient = []
     all_steps = sum([j["step_count"] for j in gradient_list])
     for i in range(len(gradient_list[0]["gradient"])):
-        result = torch.sum(torch.stack([j["gradient"][i].mul_(j["step_count"]).to(device) for j in gradient_list]), dim=0)
-        agg_gradient.append(result.mul_(1.0/all_steps))
+        result = torch.sum(torch.stack([j["gradient"][i].mul_(j["step_count"]).to(device) for j in gradient_list]),
+                           dim=0)
+        agg_gradient.append(result.mul_(1.0 / all_steps))
 
     if 'bn' in gradient_list[0].keys() and aggrete_bn:
         bn_result = []
@@ -71,6 +72,18 @@ def compress(gradient, device=torch.device("cpu")):
 def get_serialize_size(obj):
     b = base64.b64encode(pickle.dumps(obj)).decode('utf-8')
     return round(sys.getsizeof(b) * 10e-6, 3)
+
+
+def parameter_count(value):
+    if isinstance(value, torch.nn.Module):  # value is a model
+        return sum([l[1].numel() for l in value.state_dict().items()])
+    elif isinstance(value, list) and isinstance(value[0], dict):  # value is a compressed gradient list
+        # value = [gradient, gradient, ...]
+        # gradient = {"gradient":[(tensor, (shape, mask, numel)), (tensor, (shape, mask, numel)), ...],
+        #             "step_count": int}
+        value_ = [v["gradient"] for v in value]
+        # sum the mask to get number of parameters in each layer and sum these numbers
+        return sum([sum(l[1][1]) for l in value_])
 
 
 def set_gradient(opt, cg):

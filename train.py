@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from globalfusion.warmup import warmup
-from utils.aggregator import aggregater, decompress, get_serialize_size
+from utils.aggregator import aggregater, decompress, get_serialize_size, parameter_count
 from utils.configer import Configer
 from utils.dataloaders import cifar_dataloaders, femnist_dataloaders,DATALOADER
 from utils.eval import evaluater
@@ -114,9 +114,9 @@ if __name__ == '__main__':
     ev = evaluater(config=config, dataloader=dataloaders["test"], device=torch.device("cuda:{}".format(gpus[0])),
                    writer=None)
 
-    # inint traffic simulator
+    # init traffic simulator (count number of parameters of transmitted gradient)
     traffic = 0
-    traffic += get_serialize_size(net) * 4  # 4 clients download
+    traffic += (parameter_count(net) * config.general.get_nodes())  # clients download
     # train
     print("\nStart training...")
     if not num_pool == -1:
@@ -143,7 +143,7 @@ if __name__ == '__main__':
             for tr in trainers:
                 gs.append(tr.last_gradient)
 
-            traffic += get_serialize_size(gs) * 2  # 4 clients upload and aggregator download download
+            traffic += parameter_count(gs) * 2  # clients upload and aggregator download
 
             # decompress
             result = executor.map(decompress, [gs[i]["gradient"] for i in range(len(gs))])
@@ -184,7 +184,7 @@ if __name__ == '__main__':
                 _ = tr.train_run(round_=epoch)
                 gs.append(tr.last_gradient)
 
-            traffic += get_serialize_size(gs) * 2  # 4 clients upload and aggregator download download
+            traffic += parameter_count(gs) * 2  # clients upload and aggregator download
 
             for i in range(len(gs)):
                 gs[i]["gradient"] = decompress(gs[i]["gradient"], device=torch.device("cuda:0"))
@@ -204,16 +204,16 @@ if __name__ == '__main__':
         ####################################################################################################
         for tr in trainers:
             tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=rg,
-                        compare_with="momentum", mask=False, weight_distribution=False, layer_info=False)
-            # ["iid", "momentum", "agg"]
+                        compare_with="agg", mask=False, weight_distribution=False, layer_info=False)
+            # ["momentum", "agg"]
 
         test_acc = sum(test_acc) / len(test_acc)
         test_loss = sum(test_loss) / len(test_loss)
         writer.add_scalar("test loss", test_loss, global_step=epoch, walltime=None)
         writer.add_scalar("test acc", test_acc, global_step=epoch, walltime=None)
-        writer.add_scalar("traffic(MB)", traffic, global_step=epoch, walltime=None)
+        writer.add_scalar("traffic(number_of_parameters)", traffic, global_step=epoch, walltime=None)
 
-        traffic += get_serialize_size(rg) * 4  # 4 clients download
+        traffic += (parameter_count(rg) * config.general.get_nodes())  # clients download
 
         l = 0.0
         ls = []
@@ -248,5 +248,5 @@ if __name__ == '__main__':
     json.dump(context, f, indent=4)
     f.close()
 
-    time.sleep(30)
+    time.sleep(20)
     print("Done")
