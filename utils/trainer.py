@@ -252,7 +252,7 @@ class trainer:
                     idx += 3
         self.last_model = copy.deepcopy(model)
         self.last_de_gradient = copy.deepcopy(base_gradient)
-        self.last_onestep_state = optimizer.state_dict()
+        # self.last_onestep_state = optimizer.state_dict()
         if round_ >= self.config.trainer.get_base_step() - 1:
             self.update_global_momentum()
         return
