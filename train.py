@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from globalfusion.warmup import warmup
-from utils.aggregator import aggregater, decompress, get_serialize_size, parameter_count
+from utils.aggregator import aggregater, decompress, compress, parameter_count
 from utils.configer import Configer
 from utils.dataloaders import cifar_dataloaders, femnist_dataloaders,DATALOADER
 from utils.eval import evaluater
@@ -213,7 +213,8 @@ if __name__ == '__main__':
         writer.add_scalar("test acc", test_acc, global_step=epoch, walltime=None)
         writer.add_scalar("traffic(number_of_parameters)", traffic, global_step=epoch, walltime=None)
 
-        traffic += (parameter_count(rg) * config.general.get_nodes())  # clients download
+        # clients download
+        traffic += (parameter_count([{"gradient": compress(rg["gradient"])}]) * config.general.get_nodes())
 
         l = 0.0
         ls = []

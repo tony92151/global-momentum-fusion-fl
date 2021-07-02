@@ -83,7 +83,7 @@ def parameter_count(value):
         #             "step_count": int}
         value_ = [v["gradient"] for v in value]
         # sum the mask to get number of parameters in each layer and sum these numbers
-        return sum([sum(l[1][1]) for l in value_])
+        return sum([sum([len(l[0]) for l in g]) for g in value_])
 
 
 def set_gradient(opt, cg):
