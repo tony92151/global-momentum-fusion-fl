@@ -130,7 +130,7 @@ class trainer:
             losses = sum(losses) / len(losses)
             eploss.append(losses)
 
-        optimizer.set_accumulate_gradient(model=model, record_batchnorm=False)
+        optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
         self.print_("trainer >> cid: {} >> compress, {}".format(self.cid, time.time()))
         ############################################################
         if self.config.dgc.get_dgc():
