@@ -20,4 +20,25 @@ this might take 1 hours
 python3 ./create_femnist.py --data {path to}/leaf/data/femnist/data
 ```
 
-or just download it [here](https://drive.google.com/file/d/1EYBkvR_gvKdndffHGMEqe0GjcEDn54IQ/view?usp=sharing), this has 175 clients and at least 200 images each client.
+Or just download it by
+```python
+python3 ./create_femnist.py --data download
+```
+this has 175 clients and at least 200 images each client.
+
+### shakespeare
+
+fellow this [repo](https://github.com/TalwalkarLab/leaf/tree/master/data/shakespeare)
+
+```shell
+./preprocess.sh -s niid --sf 1.0 -k 0 -t sample -tf 1
+```
+this might take 1 minute
+
+```python
+python3 ./create_shakespeare.py --data {path to}/leaf/data/shakespeare/data
+```
+Or just download it by
+```python
+python3 ./create_shakespeare.py --data download
+```

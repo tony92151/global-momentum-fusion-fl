@@ -11,7 +11,28 @@ if __name__ == '__main__':
     parser.add_argument('-f')
     args = parser.parse_args()
 
-    path = os.path.abspath(args.data)
+    if args.data == "download":
+        if os.path.exists(os.path.abspath("./femnist")):
+            raise ValueError("Folder: \"{}\" exist".format(os.path.abspath("./femnist")))
+        os.makedirs(os.path.abspath("./femnist"))
+        import gdown, tarfile
+        # download
+        url = 'https://drive.google.com/uc?id=1omCdM8BdHprCSwqqFW-ypMsdLMc8WopF'
+        output = os.path.join(os.path.abspath("./femnist"), 'femnist_200up_175clients_jsonfile.tar.gz')
+        print("\nDownload ...")
+        gdown.download(url, output, quiet=False)
+        # check
+        md5 = 'cacb1755dbafe6b25cc1a480ce662783'
+        gdown.cached_download(url, output, md5=md5, postprocess=gdown.extractall)
+        time.sleep(3)
+        # extraction
+        print("\nExtracting ...")
+        tar = tarfile.open(output, 'r:gz')
+        tar.extractall()
+
+        path = os.path.abspath("./femnist")
+    else:
+        path = os.path.abspath(args.data)
 
     train_list = glob.glob(os.path.join(path, "train", "all_data_*.json"))
     test_list = glob.glob(os.path.join(path, "test", "all_data_*.json"))
@@ -40,7 +61,7 @@ if __name__ == '__main__':
     os.makedirs(os.path.join(os.path.abspath("."), "femnist"), exist_ok=True)
     torch.save(train_data, os.path.join(os.path.abspath("."), "femnist", "train_data.pt"))
     torch.save(test_data, os.path.join(os.path.abspath("."), "femnist", "test_data.pt"))
-    print("Save : {}".format(os.path.join(os.path.abspath("."), "femnist", "train_data.pt")))
+    print("\nSave : {}".format(os.path.join(os.path.abspath("."), "femnist", "train_data.pt")))
     print("Save : {}".format(os.path.join(os.path.abspath("."), "femnist", "test_data.pt")))
     time.sleep(3)
     print("Done")
