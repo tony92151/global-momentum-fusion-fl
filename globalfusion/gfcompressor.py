@@ -1,9 +1,11 @@
 import torch
 import copy
 import math
+
 # from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 # from torch.multiprocessing import Pool
 torch.multiprocessing.set_start_method('spawn', force=True)
+
 
 def normalize(value):
     value = copy.deepcopy(value)
@@ -67,7 +69,7 @@ class GFCCompressor:
 
             if gmome is not None:
                 tensor_a = self.fusing_ratio * normalize(gmome[t].flatten()).to(self.device) \
-                            + (1.0 - self.fusing_ratio) * normalize(tensor).to(self.device)
+                           + (1.0 - self.fusing_ratio) * normalize(tensor).to(self.device)
             else:
                 tensor_a = tensor
 
@@ -86,21 +88,25 @@ class GFCCompressor:
                 compress = False
 
             if compress:
-                for i in range(10):
-                    thr = (tmax + tmin) / 2
-                    mask = tensor_b.abs().to(self.device) >= thr.to(self.device)
-                    selected = mask.sum()
-
-                    if selected > (tensor_b.numel() * min(self.compress_ratio + 0.05, 1)):
-                        tmin = thr
-                        continue
-                    if selected < (tensor_b.numel() * max(self.compress_ratio - 0.05, 0.01)):
-                        tmax = thr
-                        continue
-                    break
+                # for i in range(10):
+                #     thr = (tmax + tmin) / 2
+                #     mask = tensor_b.abs().to(self.device) >= thr.to(self.device)
+                #     selected = mask.sum()
+                #
+                #     if selected > (tensor_b.numel() * min(self.compress_ratio + 0.05, 1)):
+                #         tmin = thr
+                #         continue
+                #     if selected < (tensor_b.numel() * max(self.compress_ratio - 0.05, 0.01)):
+                #         tmax = thr
+                #         continue
+                #     break
                 # cr = max(0.0, min(1.0, self.compress_ratio))
                 # thr = torch.min(torch.topk(tensor_b.abs(), max(1, int(tensor_b.numel() * cr)),
                 #                            largest=True, sorted=False)[0])
+                # jit function
+                cr = max(0.0, min(1.0, self.compress_ratio))
+                thr = find_threshold(tensor_b, cr)
+
                 mask = tensor_a.to(self.device) >= thr.to(self.device)
             else:
                 mask = tensor.abs().to(self.device) > 0
@@ -130,6 +136,12 @@ class GFCCompressor:
             tensor_decompressed.scatter_(0, indices, values)
             decompressed_mem.append(tensor_decompressed.view(shape))
         return decompressed_mem
+
+
+@torch.jit.script
+def find_threshold(tensor, cr):
+    thr = torch.min(torch.topk(tensor.abs(), max(1, int(tensor.numel() * cr)), largest=True, sorted=False)[0])
+    return thr
 
 
 def layer_compress(dic):
