@@ -29,7 +29,7 @@ def SERVEROPTS(config: Configer = None, params=None, lr=None, **kwargs):
         opt = SERVEROPT[config.agg.get_optimizer()](params=params, lr=lr, **args)
     except TypeError:
         print("[Warning] Error arguments:\"{}\" for optimizer:\"{}\", using default setting.".format(
-            args, config.trainer.get_optimizer()))
+            args, config.agg.get_optimizer()))
         opt = SERVEROPT[config.agg.get_optimizer()](params=params, lr=lr)
     return opt
 
