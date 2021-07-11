@@ -105,7 +105,7 @@ class GFCCompressor:
                 #                            largest=True, sorted=False)[0])
                 # jit function
                 cr = max(0.0, min(1.0, self.compress_ratio))
-                thr = find_threshold(tensor_b, cr)
+                thr = find_threshold(tensor_b, torch.tensor(cr))
 
                 mask = tensor_a.to(self.device) >= thr.to(self.device)
             else:
