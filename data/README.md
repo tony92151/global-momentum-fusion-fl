@@ -2,9 +2,16 @@
 
 ### cifar10
 
+This command will download cifar10 by pyrorch build-in function, and generate indexing json files for all clients.
 ```python
-python3 ./create_cifar10.py --data ./cifar10 --n 4
+python3 ./create_cifar10.py --n 20
 ```
+
+This command will download cifar10 by pyrorch build-in function, and download indexing json files of 20 clients in our experiment.
+```python
+python3 ./create_cifar10.py --download True
+```
+
 
 ### femnist
 

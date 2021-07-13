@@ -14,10 +14,11 @@ from tqdm import tqdm
 from globalfusion.warmup import warmup
 from utils.aggregator import aggregater, decompress, compress, parameter_count
 from utils.configer import Configer
-from utils.dataloaders import cifar_dataloaders, femnist_dataloaders,DATALOADER
+from utils.dataloaders import cifar_dataloaders, femnist_dataloaders, DATALOADER
 from utils.eval import evaluater
 from utils.models import MODELS
 from utils.trainer import trainer
+
 
 def set_seed(seed):
     torch.manual_seed(seed)
@@ -168,7 +169,7 @@ if __name__ == '__main__':
             test_loss = []
             ev.round = epoch
             # executor = ThreadPoolExecutor(max_workers=num_pool)
-            set_seed(epoch+1000)
+            set_seed(epoch + 1000)
             acc, loss = ev.eval_run(trainers[0].last_model)
             test_acc.append(acc)
             test_loss.append(loss)
@@ -222,7 +223,8 @@ if __name__ == '__main__':
             l = [tr.weight_divergence[k].cpu() for tr in trainers]
             l = sum(l) / len(l)
             ls.append(l)
-            writer.add_scalar("wdv client_avg layer {}".format(k), l, global_step=epoch, walltime=None)
+            if False:  # print layer-wise wdv
+                writer.add_scalar("wdv client_avg layer {}".format(k), l, global_step=epoch, walltime=None)
 
         writer.add_scalar("wdv client_avg", sum(ls) / len(ls), global_step=epoch, walltime=None)
 

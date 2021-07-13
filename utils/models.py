@@ -67,8 +67,21 @@ class ResNet50_femnist(torchvision.models.resnet.ResNet):
 class ResNet101_femnist(torchvision.models.resnet.ResNet):
     def __init__(self):
         super(ResNet101_femnist, self).__init__(block=torchvision.models.resnet.Bottleneck, layers=[3, 4, 23, 3],
-                                                num_classes=62)
-        self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=1, padding=3, bias=False)
+                                                num_claisses=62)
+
+
+#         self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=1, padding=3, bias=False)
+#
+# # These models inheritance from CifarResNet are a little bit different dfferent from official one
+
+class ResNet56_femnist_gdc(CifarResNet):
+    def __init__(self):
+        super(ResNet56_femnist_gdc, self).__init__(params=[(16, 9, 1), (32, 9, 2), (64, 9, 2)], num_classes=62)
+
+
+class ResNet110_femnist_gdc(CifarResNet):
+    def __init__(self):
+        super(ResNet110_femnist_gdc, self).__init__(params=[(16, 18, 1), (32, 18, 2), (64, 18, 2)], num_classes=62)
 
 
 class Net_cifar(nn.Module):
@@ -129,6 +142,8 @@ MODELS_TABLE = {
     "resnet18_femnist": ResNet18_femnist,
     "resnet50_femnist": ResNet50_femnist,
     "resnet101_femnist": ResNet101_femnist,
+    "resnet56_femnist_gdc": ResNet56_femnist_gdc,
+    "resnet110_femnist_gdc": ResNet110_femnist_gdc,
     # for shakespeare
     "lstm_shakespeare": LSTM_shakespeare,
 }

@@ -1,6 +1,8 @@
 import pickle
 import os, json
 import random, copy
+import time
+
 import numpy as np
 import argparse
 from shutil import copyfile
@@ -61,13 +63,49 @@ cifar_path = ["cifar-10-batches-py/data_batch_1",
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default="./cifar10")
-    parser.add_argument('--n', type=int, default=100)
+    parser.add_argument('--n', type=int, default=20)
+    parser.add_argument('--download', type=bool, default=False)
     parser.add_argument('-f')
     args = parser.parse_args()
 
-    path = os.path.abspath(args.data)
+    path = os.path.abspath(os.path.abspath("./cifar10"))
     number_of_client = args.n
+
+    if args.download:
+        if os.path.exists(path):
+            raise ValueError("Folder: \"{}\" exist".format(path))
+        os.makedirs(path)
+        import gdown, tarfile
+        # download
+        dataset = torchvision.datasets.CIFAR10(root=path, train=True, download=True)
+        url = 'https://drive.google.com/uc?id=1Knlvw0EUBNQFt8L5rB8ejS0gdUlh0zLY'
+        output = os.path.join(path, 'cifar10_c20.tar.gz')
+        print("\nDownload ...")
+        gdown.download(url, output, quiet=False)
+        # check
+        md5 = 'a19efe2dd897835b4abdf1f959b19c9b'
+        gdown.cached_download(url, output, md5=md5, postprocess=gdown.extractall)
+        time.sleep(3)
+        # extraction
+        print("\nExtracting ...")
+        tar = tarfile.open(output, 'r:gz')
+        tar.extractall()
+
+        time.sleep(1)
+        # print data
+        file_ = open(os.path.join(path, "niid", "index.json"), 'r')
+        context_niid = json.load(file_)
+        file_.close()
+
+        for j in range(len(context_niid.keys())):
+            ans = [0 for i in range(10)]
+            for i in context_niid[str(j)]:
+                ans[dataset.targets[i]] += 1
+            print("client: {} , {}, sum: {}".format(j, ans, sum(ans)))
+
+        exit()
+
+    path = os.path.abspath(args.data)
 
     # Download
     _ = torchvision.datasets.CIFAR10(root=path, train=True, download=True)
