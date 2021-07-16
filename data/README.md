@@ -19,9 +19,9 @@ fellow this [repo](https://github.com/TalwalkarLab/leaf/tree/master/data/femnist
 
 ```shell
 # might take 1 hour
-./preprocess.sh -s niid --sf 0.05 -k 200 -t sample
+./preprocess.sh -s niid --sf 1 -k 100 -t sample --smplseed 123 --spltseed 1234
 ```
-this might take 1 hours
+this might take 1.5 hours
 
 ```python
 python3 ./create_femnist.py --data {path to}/leaf/data/femnist/data

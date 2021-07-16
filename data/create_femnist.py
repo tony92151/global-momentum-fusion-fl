@@ -17,20 +17,20 @@ if __name__ == '__main__':
         os.makedirs(os.path.abspath("./femnist"))
         import gdown, tarfile
         # download
-        url = 'https://drive.google.com/uc?id=1omCdM8BdHprCSwqqFW-ypMsdLMc8WopF'
-        output = os.path.join(os.path.abspath("./femnist"), 'femnist_200up_175clients_jsonfile.tar.gz')
+        url = 'https://drive.google.com/uc?id=1tzA5b92qhrFBjVTyVP645Dfs4fTV2SNL'
+        output = os.path.join(os.path.abspath("./femnist"), 'femnist_100up_jsonfile.tar.gz')
         print("\nDownload ...")
         gdown.download(url, output, quiet=False)
         # check
-        md5 = 'cacb1755dbafe6b25cc1a480ce662783'
+        md5 = 'df9e06065616a86228ceea8ab690012d'
         gdown.cached_download(url, output, md5=md5, postprocess=gdown.extractall)
         time.sleep(3)
         # extraction
         print("\nExtracting ...")
         tar = tarfile.open(output, 'r:gz')
-        tar.extractall()
+        tar.extractall(path=os.path.abspath("./femnist"))
 
-        path = os.path.abspath("./femnist")
+        path = os.path.abspath("./femnist/femnist_100up_jsonfile")
     else:
         path = os.path.abspath(args.data)
 
