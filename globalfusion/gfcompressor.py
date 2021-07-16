@@ -105,7 +105,8 @@ class GFCCompressor:
                 #                            largest=True, sorted=False)[0])
                 # jit function
                 cr = max(0.0, min(1.0, self.compress_ratio))
-                thr = find_threshold(tensor_b, torch.tensor(cr))
+                # thr = find_threshold(tensor_b, torch.tensor(cr))
+                thr = find_threshold_by_sort(tensor_b, cr)
 
                 mask = tensor_a.to(self.device) >= thr.to(self.device)
             else:
@@ -142,6 +143,13 @@ class GFCCompressor:
 def find_threshold(tensor, cr):
     thr = torch.min(torch.topk(tensor.abs(), max(1, int(tensor.numel() * cr)), largest=True, sorted=False)[0])
     return thr
+
+
+def find_threshold_by_sort(tensor, cr):
+    numel = tensor.numel()
+    idx = max(0, min(numel, round(numel * float(cr))))
+    values, indices = torch.sort(tensor)
+    return values[idx]
 
 
 def layer_compress(dic):

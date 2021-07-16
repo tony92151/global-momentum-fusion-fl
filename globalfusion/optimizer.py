@@ -176,7 +176,7 @@ class GFDGCSGD(torch.optim.Optimizer):
             r = self.compressor.compress(self.memory.mem["gradient"], gmome=global_momentum, compress=compress)
             self.print_("optimizer >> compress done, {}".format(time.time()))
 
-        # bn should't be compressed
+        # bn shouldn't be compressed
         if 'bn' in self.memory.mem.keys():
             for p in range(len(self.memory.mem["bn"])):
                 self.memory.mem["bn"][p] = self.memory.mem["bn"][p].tolist()
