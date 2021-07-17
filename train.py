@@ -91,7 +91,7 @@ if __name__ == '__main__':
     else:
         print("\nUse non-iid dataloader...")
 
-    # Init trainers
+    # Init trainersd
     print("\nInit trainers...")
     print("Nodes: {}".format(config.general.get_nodes()))
     trainers = []
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         trainers.append(trainer(config=config,
                                 device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
                                 dataloader=dataloaders["train_s"][i],
-                                dataloader_iid=dataloaders["train_s_iid"][i],
+                                dataloader_ii=dataloaders["train_s_iid"][i],
                                 cid=i,
                                 writer=writer,
                                 warmup=w))
@@ -147,13 +147,15 @@ if __name__ == '__main__':
             traffic += parameter_count(gs) * 2  # clients upload and aggregator download
 
             # decompress
-            result = executor.map(decompress, [gs[i]["gradient"] for i in range(len(gs))])
-            result = [i for i in result]
+            # result = executor.map(decompress, [gs[i]["gradient"] for i in range(len(gs))])
+            # result = [i for i in result]
+            # for i in range(len(gs)):
+            #     gs[i]["gradient"] = result[i]
             for i in range(len(gs)):
-                gs[i]["gradient"] = result[i]
+                gs[i]["gradient"] = decompress(gs[i]["gradient"])
 
             # aggregate
-            rg = aggregater(gs, device=torch.device("cuda:{}".format(gpus[0])), aggrete_bn=False)
+            rg = aggregater(gs, aggrete_bn=False)
 
             # one-step update
             futures_ = []
@@ -188,7 +190,7 @@ if __name__ == '__main__':
             traffic += parameter_count(gs) * 2  # clients upload and aggregator download
 
             for i in range(len(gs)):
-                gs[i]["gradient"] = decompress(gs[i]["gradient"], device=torch.device("cuda:0"))
+                gs[i]["gradient"] = decompress(gs[i]["gradient"])
 
             rg = aggregater(gs, device=torch.device("cuda:0"), aggrete_bn=False)
 
