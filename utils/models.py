@@ -77,11 +77,13 @@ class ResNet101_femnist(torchvision.models.resnet.ResNet):
 class ResNet56_femnist_gdc(CifarResNet):
     def __init__(self):
         super(ResNet56_femnist_gdc, self).__init__(params=[(16, 9, 1), (32, 9, 2), (64, 9, 2)], num_classes=62)
+        self._modules['features'][0] = nn.Conv2d(1, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
 
 
 class ResNet110_femnist_gdc(CifarResNet):
     def __init__(self):
         super(ResNet110_femnist_gdc, self).__init__(params=[(16, 18, 1), (32, 18, 2), (64, 18, 2)], num_classes=62)
+        self._modules['features'][0] = nn.Conv2d(1, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
 
 
 class Net_cifar(nn.Module):
@@ -126,6 +128,35 @@ class Net_femnist(nn.Module):
         return x
 
 
+class Net_femnist_afo(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, bias=True)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, bias=True)
+        self.re = nn.ReLU()
+        self.max2d = nn.MaxPool2d(kernel_size=2)
+        self.drop1 = nn.Dropout(p=0.25)
+        self.drop2 = nn.Dropout(p=0.5)
+        self.flatten = nn.Flatten()
+
+        self.fc1 = nn.Linear(9216, 128)
+        self.fc2 = nn.Linear(128, 62)
+        self.softmax = nn.Softmax()
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = F.relu(self.conv2(x))
+        x = self.max2d(x)
+        x = self.drop1(x)
+        x = self.flatten(x)
+
+        x = self.fc1(x)
+        x = self.drop2(x)
+        x = self.fc2(x)
+        x = self.softmax(x)
+        return x
+
+
 #############################################
 MODELS_TABLE = {
     # for cifar10
@@ -138,6 +169,7 @@ MODELS_TABLE = {
     "resnet110_cifar_gdc": ResNet110_cifar_gdc,
     # for femnist
     "small_femnist": Net_femnist,
+    "net_femnist_afo": Net_femnist_afo,
     "resnet9_femnist": ResNet9_femnist,
     "resnet18_femnist": ResNet18_femnist,
     "resnet50_femnist": ResNet50_femnist,

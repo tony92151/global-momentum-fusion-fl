@@ -140,7 +140,7 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
 
     if clients > len(train_data['users']):
         raise ValueError(
-            "Request clients({}) larger then dataset provide({}).".format(clients, len(train_data['users'])))
+            "Request clients({}) larger than dataset provide({}).".format(clients, len(train_data['users'])))
 
     train_data['users'] = train_data['users'][:clients]
     test_data['users'] = test_data['users'][:clients]
@@ -239,7 +239,7 @@ def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     # ['users', 'num_samples', 'user_data', 'hierarchies']
     if clients > len(train_data['users']):
         raise ValueError(
-            "Request clients({}) larger then dataset provide({}).".format(clients, len(train_data['users'])))
+            "Request clients({}) larger than dataset provide({}).".format(clients, len(train_data['users'])))
     train_data['users'] = train_data['users'][:clients]
     test_data['users'] = test_data['users'][:clients]
     #############################################################################
