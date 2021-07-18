@@ -99,7 +99,7 @@ if __name__ == '__main__':
         trainers.append(trainer(config=config,
                                 device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
                                 dataloader=dataloaders["train_s"][i],
-                                dataloader_ii=dataloaders["train_s_iid"][i],
+                                dataloader_iid=dataloaders["train_s_iid"][i],
                                 cid=i,
                                 writer=writer,
                                 warmup=w))
@@ -118,16 +118,24 @@ if __name__ == '__main__':
     # init traffic simulator (count number of parameters of transmitted gradient)
     traffic = 0
     traffic += (parameter_count(net) * config.general.get_nodes())  # clients download
+
+    client_smapled_count = [0 for i in raneg(config.general.get_nodes())]
     # train
     print("\nStart training...")
     if not num_pool == -1:
         executor = ThreadPoolExecutor(max_workers=num_pool)
     for epoch in tqdm(range(config.trainer.get_max_iteration())):
         gs = []
+        # sample trainer
+        set_seed(epoch+1)
+        sample_trainer_cid = random.sample(range(config.general.get_nodes()),
+                                           round(config.general.get_nodes()*config.trainer.get_frac()))
+        sample_trainer_cid = sorted(sample_trainer_cid)
         # sample dataset
         set_seed(epoch)
         for tr in trainers:
-            tr.sample_data_from_dataloader()
+            if tr.cid in sample_trainer_cid:
+                tr.sample_data_from_dataloader()
         ev.sample_data_from_dataloader()
 
         ####################################################################################################
@@ -136,15 +144,17 @@ if __name__ == '__main__':
             # training
             futures = []
             for tr in trainers:
-                futures.append(executor.submit(tr.train_run, epoch))
+                if tr.cid in sample_trainer_cid:
+                    futures.append(executor.submit(tr.train_run, epoch))
             for future in as_completed(futures):
                 pass
             del futures
 
             for tr in trainers:
-                gs.append(tr.last_gradient)
+                if tr.cid in sample_trainer_cid:
+                    gs.append(tr.last_gradient)
 
-            traffic += parameter_count(gs) * 2  # clients upload and aggregator download
+            traffic += parameter_count(gs) # clients transmit to aggregator(server)
 
             # decompress
             # result = executor.map(decompress, [gs[i]["gradient"] for i in range(len(gs))])
@@ -155,13 +165,13 @@ if __name__ == '__main__':
                 gs[i]["gradient"] = decompress(gs[i]["gradient"])
 
             # aggregate
-            rg = aggregater(gs, aggrete_bn=False)
+            aggregated_gradient = aggregater(gs, aggrete_bn=False)
 
             # one-step update
             futures_ = []
             for tr in trainers:
                 tr.round = epoch
-                futures_.append(executor.submit(tr.opt_step_base_model, rg))
+                futures_.append(executor.submit(tr.opt_step_base_model, aggregated_gradient))
             for future in as_completed(futures_):
                 pass
             del futures_
@@ -192,10 +202,10 @@ if __name__ == '__main__':
             for i in range(len(gs)):
                 gs[i]["gradient"] = decompress(gs[i]["gradient"])
 
-            rg = aggregater(gs, device=torch.device("cuda:0"), aggrete_bn=False)
+            aggregated_gradient = aggregater(gs, device=torch.device("cuda:0"), aggrete_bn=False)
 
             for tr in trainers:
-                tm = tr.opt_step_base_model(round_=epoch, base_gradient=rg)
+                tm = tr.opt_step_base_model(round_=epoch, base_gradient=aggregated_gradient)
 
             test_acc = []
             test_loss = []
@@ -206,7 +216,7 @@ if __name__ == '__main__':
         ####################################################################################################
         ####################################################################################################
         for tr in trainers:
-            tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=rg,
+            tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=aggregated_gradient,
                         compare_with="agg", mask=False, weight_distribution=False, layer_info=False)
             # ["momentum", "agg"]
 
@@ -230,6 +240,10 @@ if __name__ == '__main__':
 
         writer.add_scalar("wdv client_avg", sum(ls) / len(ls), global_step=epoch, walltime=None)
 
+        for cid in sample_trainer_cid:
+            client_smapled_count[cid] += 1
+
+    print(client_smapled_count)
     if not num_pool == -1:
         executor.shutdown(True)
     # save result
@@ -245,9 +259,9 @@ if __name__ == '__main__':
 
     name = tb_path.split("/")[-1]
     if name not in context.keys():
-        context[name] = [{"test_acc": test_acc, "test loss": test_loss}]
+        context[name] = [{"test_acc": test_acc, "test loss": test_loss, "client_smapled_count":client_smapled_count}]
     else:
-        context[name].append({"test_acc": test_acc, "test loss": test_loss})
+        context[name].append({"test_acc": test_acc, "test loss": test_loss, "client_smapled_count":client_smapled_count})
 
     f = open(result_path, 'w')
     json.dump(context, f, indent=4)
