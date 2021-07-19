@@ -37,6 +37,9 @@ if __name__ == '__main__':
     train_list = glob.glob(os.path.join(path, "train", "all_data_*.json"))
     test_list = glob.glob(os.path.join(path, "test", "all_data_*.json"))
 
+    train_list = sorted(train_list, key = lambda train_list : int(train_list.split("/")[-1].split("_")[2]))
+    test_list = sorted(test_list, key = lambda test_list : int(test_list.split("/")[-1].split("_")[2]))
+
     train_data = {'users': [], 'num_samples': [], 'user_data': {}}
     test_data = {'users': [], 'num_samples': [], 'user_data': {}}
 

@@ -119,7 +119,7 @@ if __name__ == '__main__':
     traffic = 0
     traffic += (parameter_count(net) * config.general.get_nodes())  # clients download
 
-    client_smapled_count = [0 for i in raneg(config.general.get_nodes())]
+    client_smapled_count = [0 for i in range(config.general.get_nodes())]
     # train
     print("\nStart training...")
     if not num_pool == -1:
@@ -215,9 +215,10 @@ if __name__ == '__main__':
             test_loss.append(loss)
         ####################################################################################################
         ####################################################################################################
-        for tr in trainers:
-            tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=aggregated_gradient,
-                        compare_with="agg", mask=False, weight_distribution=False, layer_info=False)
+        # for tr in trainers:
+        #     if tr.cid in sample_trainer_cid:
+        #         tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=aggregated_gradient,
+        #                     compare_with="agg", mask=False, weight_distribution=False, layer_info=False)
             # ["momentum", "agg"]
 
         test_acc = sum(test_acc) / len(test_acc)
@@ -227,18 +228,18 @@ if __name__ == '__main__':
         writer.add_scalar("traffic(number_of_parameters)", traffic, global_step=epoch, walltime=None)
 
         # clients download
-        traffic += (parameter_count([{"gradient": compress(rg["gradient"])}]) * config.general.get_nodes())
+        traffic += (parameter_count([{"gradient": compress(aggregated_gradient["gradient"])}]) * config.general.get_nodes())
 
-        l = 0.0
-        ls = []
-        for k in list(trainers[0].weight_divergence.keys()):
-            l = [tr.weight_divergence[k].cpu() for tr in trainers]
-            l = sum(l) / len(l)
-            ls.append(l)
-            if False:  # print layer-wise wdv
-                writer.add_scalar("wdv client_avg layer {}".format(k), l, global_step=epoch, walltime=None)
+        # l = 0.0
+        # ls = []
+        # for k in list(trainers[0].weight_divergence.keys()):
+        #     l = [tr.weight_divergence[k].cpu() for tr in trainers]
+        #     l = sum(l) / len(l)
+        #     ls.append(l)
+        #     if False:  # print layer-wise wdv
+        #         writer.add_scalar("wdv client_avg layer {}".format(k), l, global_step=epoch, walltime=None)
 
-        writer.add_scalar("wdv client_avg", sum(ls) / len(ls), global_step=epoch, walltime=None)
+        # writer.add_scalar("wdv client_avg", sum(ls) / len(ls), global_step=epoch, walltime=None)
 
         for cid in sample_trainer_cid:
             client_smapled_count[cid] += 1
