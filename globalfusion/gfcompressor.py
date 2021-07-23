@@ -149,6 +149,7 @@ def find_threshold_by_sort(tensor, cr):
     numel = tensor.numel()
     idx = max(0, min(numel, round(numel * float(cr))))
     values, indices = torch.sort(tensor)
+    values = torch.fliplr(values.unsqueeze(0)).squeeze(0)
     return values[idx]
 
 
