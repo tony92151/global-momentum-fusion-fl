@@ -14,8 +14,8 @@ import time
 import copy
 import random
 import numpy as np
-from globalfusion.gfcompressor import GFCCompressor
-from globalfusion.optimizer import GFDGCSGD
+from sparse_optimizer.globalfusion.gfcompressor import GFCCompressor
+from sparse_optimizer.globalfusion.optimizer import GFDGCSGD
 from utils.configer import Configer
 from utils.opti import SERVEROPTS, FEDOPTS
 from utils.aggregator import set_gradient
@@ -40,7 +40,7 @@ class trainer:
         self.last_state = None
         self.training_loss = 0
         self.warmup = warmup
-        self.optimizer: GFDGCSGD = None
+        # self.optimizer: GFDGCSGD = None
 
         self.last_onestep_state = None
 
@@ -131,7 +131,7 @@ class trainer:
             losses = sum(losses) / len(losses)
             eploss.append(losses)
 
-        optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
+        optimizer.record_batchnorm(model=model)
         self.print_("trainer >> cid: {} >> compress, {}".format(self.cid, time.time()))
         ############################################################
         if self.config.dgc.get_dgc():
@@ -234,7 +234,6 @@ class trainer:
         lr = self.warmup.get_lr_from_step(round_)
 
         model.to(self.device).train()
-        opt = self.config.agg.get_optimizer()
         optimizer = SERVEROPTS(config=self.config, params=model.parameters(), lr=lr)
         if self.last_onestep_state is not None:
             optimizer.load_state_dict(self.last_onestep_state)
