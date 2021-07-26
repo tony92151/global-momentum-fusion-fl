@@ -15,8 +15,6 @@ class warmup:
         elif step == self.base_step:
             retult = self.max_lr
         elif step > self.base_step and step < self.end_step:
-#             retult = self.max_lr - (self.max_lr - self.min_lr) * np.sin(
-#                 (np.pi / 2.0) * (step - self.base_step) / (self.end_step - self.base_step))
             c = (np.cos(np.pi * (step - self.base_step) / (self.end_step - self.base_step))+1)/2
             retult = self.max_lr - (self.max_lr - self.min_lr) * (1-c)
         elif step >= self.end_step:

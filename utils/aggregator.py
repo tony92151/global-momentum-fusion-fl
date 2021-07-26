@@ -3,7 +3,7 @@ import pickle
 import sys
 from copy import deepcopy as dcopy
 import torch
-from globalfusion.gfcompressor import GFCCompressor
+from sparse_optimizer.topk_compressor import topkCompressor
 
 
 def add_mean_var(means=None, vrs=None, tracks=None):
@@ -60,13 +60,13 @@ def aggregater(gradient_list, device=torch.device("cpu"), aggrete_bn=False):
 
 
 def decompress(gradient, device=torch.device("cpu")):
-    compresser = GFCCompressor(device=device)
+    compresser = topkCompressor(device=device)
     return compresser.decompress(gradient)
 
 
 def compress(gradient, device=torch.device("cpu")):
-    compresser = GFCCompressor(device=device)
-    return compresser.compress(gradient, gmome=None, compress=False)
+    compresser = topkCompressor(device=device)
+    return compresser.compress(gradient, compress=False)
 
 
 def get_serialize_size(obj):

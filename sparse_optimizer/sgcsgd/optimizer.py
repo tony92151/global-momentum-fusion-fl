@@ -3,45 +3,10 @@ import copy, os, time
 from globalfusion.gfcompressor import GFCCompressor
 from collections import defaultdict
 from torch.optim.lr_scheduler import StepLR
-"""
-Original usage:
-
-optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
-optimizer.zero_grad()
-output = model(input)
-loss = loss_fn(output, target)
-loss.backward()
-optimizer.step()
-"""
-
-"""
-FGCSGD usage:
-
-optimizer = FGCSGD(model.parameters(), lr=0.1, compress_ratio=0.5)
-
-optimizer.memory.clean()
-
-for input,target in dataloader:
-    optimizer.zero_grad()
-    output = model(input)
-    loss = loss_fn(output, target)
-    loss.backward()
-    
-    
-optimizer.set_accumulate_gradient(model=model, record_batchnorm=True)
-optimizer.compress(global_momentum=self.last_gradient["gradient"], compress=True, momentum_correction=True)
-cg = optimizer.memory.compressed_mem
-<send gradient>
-
-if <receive aggregated gradient>:
-    dg = optimizer.decompress(new_gradient)
-    optimizer.set_gradient(dg)
-    optimizer.step()
-"""
 
 
 # copy from torch/optim/sgd.py
-class GFDGCSGD(torch.optim.Optimizer):
+class SGCSGD(torch.optim.Optimizer):
     def __init__(self, params, cid=-1, lr=None, dgc_momentum=0.9, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False, compress_ratio=0.5, fusing_ratio=0.5, checkpoint=False,
                  device=torch.device("cpu"), pool=None):
@@ -67,10 +32,10 @@ class GFDGCSGD(torch.optim.Optimizer):
                         weight_decay=weight_decay, nesterov=nesterov)
         if nesterov and (momentum <= 0 or dampening != 0):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")
-        super(GFDGCSGD, self).__init__(params, defaults)
+        super(SGCSGD, self).__init__(params, defaults)
 
     def __setstate__(self, state):
-        super(GFDGCSGD, self).__setstate__(state)
+        super(SGCSGD, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('nesterov', False)
 

@@ -1,4 +1,3 @@
-from globalfusion.optimizer import GFDGCSGD as GFDGCSGD_
 from torch.optim import Adagrad
 from torch.optim import SGD
 from torch.optim import Adam
@@ -6,7 +5,9 @@ import torch
 from copy import deepcopy as dcopy
 from torch_optimizer import Yogi
 from utils.configer import Configer
-from globalfusion.optimizer import GFDGCSGD
+from sparse_optimizer.globalfusion.optimizer import GFDGCSGD
+from sparse_optimizer.dgcsgd.optimizer import DGCSGD
+# from sparse_optimizer.sgcsgd.optimizer import 
 
 SERVEROPT = {"SGD": SGD,
              "ADAGRAD": Adagrad,
@@ -34,7 +35,8 @@ def SERVEROPTS(config: Configer = None, params=None, lr=None, **kwargs):
     return opt
 
 
-FEDOPT = {"GFDGCSGD": GFDGCSGD}
+FEDOPT = {"GFDGCSGD": GFDGCSGD,
+          "DGCSGD": DGCSGD}
 
 
 def FEDOPTS(config: Configer = None, params=None, lr=None, **kwargs):
@@ -48,12 +50,13 @@ def FEDOPTS(config: Configer = None, params=None, lr=None, **kwargs):
         raise ValueError("model not define in {}".format(FEDOPT.keys()))
     args = config.trainer.get_optimizer_args()
     args.update(kwargs)
-    try:
-        opt = FEDOPT[config.trainer.get_optimizer()](params=params, lr=lr, **args)
-    except TypeError:
-        print("[Warning] Error arguments:\"{}\" for optimizer:\"{}\", using default setting.".format(
-            args, config.trainer.get_optimizer()))
-        opt = FEDOPT[config.trainer.get_optimizer()](params=params, lr=lr)
+    opt = FEDOPT[config.trainer.get_optimizer()](params=params, lr=lr, **args)
+    # try:
+    #     opt = FEDOPT[config.trainer.get_optimizer()](params=params, lr=lr, **args)
+    # except TypeError:
+    #     print("[Warning] Error arguments:\"{}\" for optimizer:\"{}\", using default setting.".format(
+    #         args, config.trainer.get_optimizer()))
+    #     opt = FEDOPT[config.trainer.get_optimizer()](params=params, lr=lr)
     return opt
 
 #

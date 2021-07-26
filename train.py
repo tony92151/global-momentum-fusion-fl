@@ -11,7 +11,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from globalfusion.warmup import warmup
+from sparse_optimizer.warmup import warmup
 from utils.aggregator import aggregater, decompress, compress, parameter_count
 from utils.configer import Configer
 from utils.dataloaders import cifar_dataloaders, femnist_dataloaders, DATALOADER
@@ -33,9 +33,16 @@ def init_writer(tbpath):
     print("\nName: {}".format(tbpath.split("/")[-1]))
     return writer
 
-
-def run(job, arg):
-    return job(arg)
+def add_info(epoch, config, warmup):
+    lr = warmup.get_lr_from_step(epoch)
+    chunk = config.trainer.get_max_iteration() / len(config.dgc.get_compress_ratio())
+    chunk_ = config.trainer.get_max_iteration() / len(config.gf.get_fusing_ratio())
+    cr = config.dgc.get_compress_ratio()[min(len(config.dgc.get_compress_ratio()), int(epoch / chunk))]
+    fr = config.gf.get_fusing_ratio()[min(len(config.gf.get_fusing_ratio()), int(epoch / chunk_))]
+    writer.add_scalar("Compress ratio", cr, global_step=epoch, walltime=None)
+    if config.gf.get_global_fusion():
+        writer.add_scalar("Fusion ratio", fr, global_step=epoch, walltime=None)
+    writer.add_scalar("Learning rate", lr, global_step=epoch, walltime=None)
 
 
 if __name__ == '__main__':
@@ -138,6 +145,7 @@ if __name__ == '__main__':
                 tr.sample_data_from_dataloader()
         ev.sample_data_from_dataloader()
 
+        add_info(epoch, config, w)
         ####################################################################################################
         ####################################################################################################
         if not num_pool == -1:

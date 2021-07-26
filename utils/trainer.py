@@ -53,7 +53,7 @@ class trainer:
             self.loss_function = nn.CrossEntropyLoss()
 
         self.writer = writer
-        self.verbose = False
+        self.verbose = True
 
     def print_(self, val):
         if self.verbose:
@@ -83,20 +83,17 @@ class trainer:
         chunk_ = self.config.trainer.get_max_iteration() / len(self.config.gf.get_fusing_ratio())
         cr = self.config.dgc.get_compress_ratio()[min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
         fr = self.config.gf.get_fusing_ratio()[min(len(self.config.gf.get_fusing_ratio()), int(round_ / chunk_))]
-        if self.cid == 0 and self.writer is not None:
-            self.writer.add_scalar("Compress ratio", cr, global_step=round_, walltime=None)
-            if self.config.gf.get_global_fusion():
-                self.writer.add_scalar("Fusion ratio", fr, global_step=round_, walltime=None)
-            self.writer.add_scalar("Learning rate", lr, global_step=round_, walltime=None)
+        # if self.cid == 0 and self.writer is not None:
+        #     self.writer.add_scalar("Compress ratio", cr, global_step=round_, walltime=None)
+        #     if self.config.gf.get_global_fusion():
+        #         self.writer.add_scalar("Fusion ratio", fr, global_step=round_, walltime=None)
+        #     self.writer.add_scalar("Learning rate", lr, global_step=round_, walltime=None)
 
         optimizer = FEDOPTS(config=self.config, params=model.parameters(), lr=lr,
-                            cid=self.cid,
                             dgc_momentum=self.config.dgc.get_momentum(),
                             compress_ratio=cr,
                             fusing_ratio=fr,
-                            checkpoint=False,
-                            device=self.device,
-                            pool=None)
+                            device=self.device)
         # optimizer = GFDGCSGD(params=model.parameters(),
         #                      lr=lr,
         #                      momentum=0.9,

@@ -18,11 +18,10 @@ def normalize(value):
 
 class GFCCompressor(topkCompressor):
     def __init__(self, compress_ratio=0.5, fusing_ratio=0.8, device=torch.device("cpu")):
-        super().__init__(average=True, tensors_size_are_same=False)
         self.compress_ratio = compress_ratio
         self.fusing_ratio = fusing_ratio
         self.device = device
-        super(GFCCompressor).__init__(compress_ratio=compress_ratio, fusing_ratio=fusing_ratio, device=device)
+        super().__init__(compress_ratio, device)
 
     def compress(self, mem:list, gmome:list=None, compress:bool=True):
         tensor_memory = copy.deepcopy(mem)
