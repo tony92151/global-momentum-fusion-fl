@@ -47,5 +47,5 @@ class GFDGCSGD(BASE_SGD):
                 self.memory.mem["bn"][p] = self.memory.mem["bn"][p].tolist()
 
         self.memory.mem["gradient"] = compress_result
-        self.memory.mem["step_count"] = self.step_count
+        # self.memory.mem["step_count"] = self.step_count
         self.memory.set_compressed_mem(self.memory.mem)

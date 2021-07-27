@@ -130,7 +130,8 @@ class BASE_SGD(torch.optim.Optimizer):
                     idx += 1
                 p.add_(d_p, alpha=-group['lr'])
 
-        self.step_count += 1
+        # self.step_count += 1
+        self.memory.mem["step_count"]+=1
         # self.memory.clean()
         return loss
 
