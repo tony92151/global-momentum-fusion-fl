@@ -20,6 +20,9 @@ class GFDGCSGD(BASE_SGD):
         self.device = device
         self.memory = Memory(momentum=dgc_momentum, device=device)
         self.compressor = GFCCompressor(compress_ratio=compress_ratio, fusing_ratio=fusing_ratio, device=device)
+
+        self.global_momentum = None
+        self.last_de_gradient = None
         ######
         self.verbose = False
         ######

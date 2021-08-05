@@ -153,6 +153,27 @@ class trainer:
         del model
         return
 
+    
+    # Eval with train dataloader
+    def eval_run(self, round_):
+        model = copy.deepcopy(self.last_model)
+        model.eval().to(self.device)
+        self.print_("trainer >> cid: {} >> eval start, {}".format(self.cid, time.time()))
+        losses = []
+
+        for data, target in self.sampled_data:
+            data = data.to(self.device)
+            target = target.to(self.device)
+            output = model(data)
+            loss = self.loss_function(output, target)
+            losses.append(loss.item())
+        losses = sum(losses) / len(losses)
+
+        if self.writer is not None:
+            self.writer.add_scalar("loss of {}".format(self.cid), losses, global_step=round_, walltime=None)
+
+        return
+    
     def mask(self, val):
         for t in range(len(val)):
             _, ctx = self.last_gradient["gradient"][t]
@@ -259,4 +280,4 @@ class trainer:
             self.global_momentum = copy.deepcopy(self.last_de_gradient["gradient"])
         else:
             for i in range(len(self.global_momentum)):
-                self.global_momentum[i].mul_(0.8).add_(self.last_de_gradient["gradient"][i])
+                self.global_momentum[i].mul_(self.config.gf.get_fusion_momentum()).add_(self.last_de_gradient["gradient"][i])

@@ -23,4 +23,6 @@ class config_gf:
         elif self.config["global_fusion_after_warmup"] == "True":
             return True
 
+    def get_fusion_momentum(self) -> float:
+        return float(self.config["fusion_momentum"])
 

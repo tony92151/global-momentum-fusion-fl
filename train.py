@@ -154,6 +154,9 @@ if __name__ == '__main__':
             for tr in trainers:
                 if tr.cid in sample_trainer_cid:
                     futures.append(executor.submit(tr.train_run, epoch))
+                else:
+                    futures.append(executor.submit(tr.eval_run, epoch))
+
             for future in as_completed(futures):
                 pass
             del futures

@@ -25,7 +25,7 @@ class SGCSGD(BASE_SGD):
         if weight_decay < 0.0:
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
 
-        #self.memory = FGCMemory(momentum=dgc_momentum, device=device)
+        self.memory = SPCMemory(momentum=dgc_momentum, device=device)
         self.compressor = topkCompressor(compress_ratio=compress_ratio, device=device)
         self.device = device
         ######
@@ -36,7 +36,7 @@ class SGCSGD(BASE_SGD):
         if self.verbose:
             print(val)
 
-    def compress(self, global_momentum=None, compress=True):
+    def compress(self, compress=True):
         # r = self.compressor.compress(self.memory.get_mem(), mome=mome, compress=compress, fusing=fusing)
         # self.memory.set_compressed_mem(r)
         self.print_("optimizer >> compensate, {}".format(time.time()))
