@@ -20,6 +20,7 @@ from utils.configer import Configer
 from utils.opti import SERVEROPTS, FEDOPTS
 from utils.aggregator import set_gradient
 from torch_optimizer import Yogi
+from utils.weight_divergence.weight_divergence import weight_divergence
 
 
 class trainer:
@@ -153,7 +154,6 @@ class trainer:
         del model
         return
 
-    
     # Eval with train dataloader
     def eval_run(self, round_):
         model = copy.deepcopy(self.last_model)
@@ -173,7 +173,7 @@ class trainer:
             self.writer.add_scalar("loss of {}".format(self.cid), losses, global_step=round_, walltime=None)
 
         return
-    
+
     def mask(self, val):
         for t in range(len(val)):
             _, ctx = self.last_gradient["gradient"][t]
@@ -181,64 +181,15 @@ class trainer:
             mask = torch.tensor(mask).view(shape)
             val[t].mul_(mask.float())
 
-    def wdv_test(self, round_, gradients=None, agg_gradient=None, compare_with=None, mask=False,
-                 weight_distribution=False, layer_info=False):
-        if self.writer is None:
-            raise ValueError("Tensorboard writer not define.")
-        types = ["momentum", "agg"]
-        if compare_with is None or compare_with not in types:
-            raise ValueError("compare_with should be {}".format(types))
-        d_niid = gradients[self.cid]["gradient"]
+    def weight_divergence_test(self, round_, aggregated_gradient=None, trainer_gradient=None, base_model=None):
+        wd = weight_divergence(config=self.config,
+                               aggregated_gradient=aggregated_gradient,
+                               trainer_gradient=trainer_gradient,
+                               base_model=base_model,
+                               lr=self.warmup.get_lr_from_step(round_),
+                               device=self.device)
 
-        if compare_with == "momentum":
-            d_compare = self.global_momentum if self.global_momentum is not None else agg_gradient["gradient"]
-            if mask:
-                self.mask(d_compare)
-        elif compare_with == "agg":
-            d_compare = agg_gradient["gradient"]
-
-        dvs = []
-        for i in range(len(d_compare)):
-            dv = torch.norm(
-                torch.add(d_compare[i].to(self.device), d_niid[i].to(self.device), alpha=-1.0)) / torch.norm(
-                d_niid[i].to(self.device))
-            dvs.append(dv)
-            self.weight_divergence[list(self.weight_divergence.keys())[i]] = dv
-            if layer_info:
-                self.writer.add_scalar("{} wdv layer {}".format(self.cid, list(self.weight_divergence.keys())[i])
-                                       , dv, global_step=round_, walltime=None)
-        dvs = sum(dvs) / len(dvs)
-        if layer_info:
-            self.writer.add_scalar("{} wdv avg".format(self.cid), dvs, global_step=round_, walltime=None)
-
-        if weight_distribution:
-            measurement_max = 2
-            measurement_min = -2
-            chunk_size = 0.0001
-            chunks = [round(measurement_min + (i * chunk_size), 5)
-                      for i in range(int((measurement_max - measurement_min) / chunk_size))]
-            params = np.array([])
-            for i in self.last_model.parameters():
-                param = i.flatten()
-                param = param[param >= measurement_min]
-                param = param[param >= measurement_max]
-                params = np.append(params, param.detach().numpy())
-
-            values = np.array(params).astype(float).reshape(-1)
-            counts, limits = np.histogram(values, bins=chunks)
-            sum_sq = values.dot(values)
-            self.writer.add_histogram_raw(
-                tag='{} weight_distribution_histogram'.format(self.cid),
-                min=values.min(),
-                max=values.max(),
-                num=len(values),
-                sum=values.sum(),
-                sum_squares=sum_sq,
-                bucket_limits=limits[1:].tolist(),
-                bucket_counts=counts.tolist(),
-                global_step=0)
-            # self.last_model
-            # self.last_de_gradient
+        return wd
 
     def opt_step_base_model(self, base_gradient=None, round_=None, base_model=None):
         self.print_("trainer >> cid: {} >> opt_step, {}".format(self.cid, time.time()))
@@ -280,4 +231,5 @@ class trainer:
             self.global_momentum = copy.deepcopy(self.last_de_gradient["gradient"])
         else:
             for i in range(len(self.global_momentum)):
-                self.global_momentum[i].mul_(self.config.gf.get_fusion_momentum()).add_(self.last_de_gradient["gradient"][i])
+                self.global_momentum[i].mul_(self.config.gf.get_fusion_momentum()).add_(
+                    self.last_de_gradient["gradient"][i])
