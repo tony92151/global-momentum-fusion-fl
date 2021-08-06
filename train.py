@@ -33,6 +33,7 @@ def init_writer(tbpath):
     print("\nName: {}".format(tbpath.split("/")[-1]))
     return writer
 
+
 def add_info(epoch, config, warmup):
     lr = warmup.get_lr_from_step(epoch)
     chunk = config.trainer.get_max_iteration() / len(config.dgc.get_compress_ratio())
@@ -134,9 +135,9 @@ if __name__ == '__main__':
     for epoch in tqdm(range(config.trainer.get_max_iteration())):
         gs = []
         # sample trainer
-        set_seed(epoch+1)
+        set_seed(epoch + 1)
         sample_trainer_cid = random.sample(range(config.general.get_nodes()),
-                                           round(config.general.get_nodes()*config.trainer.get_frac()))
+                                           round(config.general.get_nodes() * config.trainer.get_frac()))
         sample_trainer_cid = sorted(sample_trainer_cid)
         # sample dataset
         set_seed(epoch)
@@ -165,18 +166,21 @@ if __name__ == '__main__':
                 if tr.cid in sample_trainer_cid:
                     gs.append(tr.last_gradient)
 
-            traffic += parameter_count(gs) # clients transmit to aggregator(server)
+            traffic += parameter_count(gs)  # clients transmit to aggregator(server)
 
-            # decompress
-            # result = executor.map(decompress, [gs[i]["gradient"] for i in range(len(gs))])
-            # result = [i for i in result]
-            # for i in range(len(gs)):
-            #     gs[i]["gradient"] = result[i]
             for i in range(len(gs)):
                 gs[i]["gradient"] = decompress(gs[i]["gradient"])
 
             # aggregate
             aggregated_gradient = aggregater(gs, aggrete_bn=False)
+
+            # calculate the weight_divergence (one-step update will overwrite the base_model, so do it first)
+            weight_divergence_list = []
+            for tr in trainers:
+                if tr.cid in sample_trainer_cid:
+                    result = tr.weight_divergence_test(epoch, aggregated_gradient=aggregated_gradient)
+                    weight_divergence_list.append(result)
+            weight_divergence_avg = sum(weight_divergence_list) / len(weight_divergence_list)
 
             # one-step update
             futures_ = []
@@ -187,70 +191,49 @@ if __name__ == '__main__':
                 pass
             del futures_
 
-            # test
-            test_acc = []
-            test_loss = []
-            ev.round = epoch
-            # executor = ThreadPoolExecutor(max_workers=num_pool)
-            set_seed(epoch + 1000)
-            acc, loss = ev.eval_run(trainers[0].last_model)
-            test_acc.append(acc)
-            test_loss.append(loss)
-            # evl_models = [copy.deepcopy(tr.last_model) for tr in trainers]
-            # result = executor.map(ev.eval_run, evl_models)
-            # for acc, loss in result:
-            #     test_acc.append(acc)
-            #     test_loss.append(loss)
-            # del evl_models
         ####################################################################################################
         else:
             for i, tr in zip(range(len(trainers)), trainers):
                 _ = tr.train_run(round_=epoch)
                 gs.append(tr.last_gradient)
 
-            traffic += parameter_count(gs) * 2  # clients upload and aggregator download
+            traffic += parameter_count(gs)  # clients upload and aggregator download
 
             for i in range(len(gs)):
                 gs[i]["gradient"] = decompress(gs[i]["gradient"])
 
             aggregated_gradient = aggregater(gs, device=torch.device("cuda:0"), aggrete_bn=False)
 
+            # calculate the weight_divergence (one-step update will overwrite the base_model, so do it first)
+            weight_divergence_list = []
+            for tr in trainers:
+                if tr.cid in sample_trainer_cid:
+                    result = tr.weight_divergence_test(epoch, aggregated_gradient=aggregated_gradient)
+                    weight_divergence_list.append(result)
+            weight_divergence_avg = sum(weight_divergence_list) / len(weight_divergence_list)
+
             for tr in trainers:
                 tm = tr.opt_step_base_model(round_=epoch, base_gradient=aggregated_gradient)
 
-            test_acc = []
-            test_loss = []
-            ev.round = epoch
-            acc, loss = ev.eval_run(model=trainers[0].last_model)
-            test_acc.append(acc)
-            test_loss.append(loss)
         ####################################################################################################
         ####################################################################################################
-        # for tr in trainers:
-        #     if tr.cid in sample_trainer_cid:
-        #         tr.wdv_test(round_=epoch, gradients=gs, agg_gradient=aggregated_gradient,
-        #                     compare_with="agg", mask=False, weight_distribution=False, layer_info=False)
-            # ["momentum", "agg"]
+        for tr in trainers:
+            if tr.cid in sample_trainer_cid:
+                tr.weight_divergence_test(epoch,
+                                          aggregated_gradient=aggregated_gradient,
+                                          trainer_gradient=None,
+                                          base_model=None)
 
-        test_acc = sum(test_acc) / len(test_acc)
-        test_loss = sum(test_loss) / len(test_loss)
+        # clients download
+        traffic += (parameter_count(
+            [{"gradient": compress(aggregated_gradient["gradient"])}]) * config.general.get_nodes())
+
+        test_acc, test_loss = ev.eval_run(model=trainers[0].last_model)
         writer.add_scalar("test loss", test_loss, global_step=epoch, walltime=None)
         writer.add_scalar("test acc", test_acc, global_step=epoch, walltime=None)
         writer.add_scalar("traffic(number_of_parameters)", traffic, global_step=epoch, walltime=None)
 
-        # clients download
-        traffic += (parameter_count([{"gradient": compress(aggregated_gradient["gradient"])}]) * config.general.get_nodes())
-
-        # l = 0.0
-        # ls = []
-        # for k in list(trainers[0].weight_divergence.keys()):
-        #     l = [tr.weight_divergence[k].cpu() for tr in trainers]
-        #     l = sum(l) / len(l)
-        #     ls.append(l)
-        #     if False:  # print layer-wise wdv
-        #         writer.add_scalar("wdv client_avg layer {}".format(k), l, global_step=epoch, walltime=None)
-
-        # writer.add_scalar("wdv client_avg", sum(ls) / len(ls), global_step=epoch, walltime=None)
+        writer.add_scalar("weight_divergence_avg", weight_divergence_avg, global_step=epoch, walltime=None)
 
         for cid in sample_trainer_cid:
             client_smapled_count[cid] += 1
@@ -258,6 +241,7 @@ if __name__ == '__main__':
     print(client_smapled_count)
     if not num_pool == -1:
         executor.shutdown(True)
+
     # save result
     result_path = os.path.join(out_path, "result.json")
     if not os.path.isfile(result_path):
@@ -271,9 +255,10 @@ if __name__ == '__main__':
 
     name = tb_path.split("/")[-1]
     if name not in context.keys():
-        context[name] = [{"test_acc": test_acc, "test loss": test_loss, "client_smapled_count":client_smapled_count}]
+        context[name] = [{"test_acc": test_acc, "test loss": test_loss, "client_smapled_count": client_smapled_count}]
     else:
-        context[name].append({"test_acc": test_acc, "test loss": test_loss, "client_smapled_count":client_smapled_count})
+        context[name].append(
+            {"test_acc": test_acc, "test loss": test_loss, "client_smapled_count": client_smapled_count})
 
     f = open(result_path, 'w')
     json.dump(context, f, indent=4)

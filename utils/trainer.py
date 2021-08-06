@@ -182,6 +182,11 @@ class trainer:
             val[t].mul_(mask.float())
 
     def weight_divergence_test(self, round_, aggregated_gradient=None, trainer_gradient=None, base_model=None):
+        if trainer_gradient is None:
+            trainer_gradient = self.last_gradient
+        if base_model is None:
+            base_model = self.last_model
+
         wd = weight_divergence(config=self.config,
                                aggregated_gradient=aggregated_gradient,
                                trainer_gradient=trainer_gradient,
