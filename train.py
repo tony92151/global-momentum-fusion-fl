@@ -128,6 +128,9 @@ if __name__ == '__main__':
     traffic += (parameter_count(net) * config.general.get_nodes())  # clients download
 
     client_smapled_count = [0 for i in range(config.general.get_nodes())]
+
+    # weight divergence record
+    weight_divergence_each_round = []
     # train
     print("\nStart training...")
     if not num_pool == -1:
@@ -178,7 +181,8 @@ if __name__ == '__main__':
             weight_divergence_list = []
             for tr in trainers:
                 if tr.cid in sample_trainer_cid:
-                    result = tr.weight_divergence_test(epoch, aggregated_gradient=aggregated_gradient)
+                    result = tr.weight_divergence_test(round_=epoch,
+                                                       aggregated_gradient=aggregated_gradient)
                     weight_divergence_list.append(result)
             weight_divergence_avg = sum(weight_divergence_list) / len(weight_divergence_list)
 
@@ -217,12 +221,12 @@ if __name__ == '__main__':
 
         ####################################################################################################
         ####################################################################################################
-        for tr in trainers:
-            if tr.cid in sample_trainer_cid:
-                tr.weight_divergence_test(epoch,
-                                          aggregated_gradient=aggregated_gradient,
-                                          trainer_gradient=None,
-                                          base_model=None)
+        # for tr in trainers:
+        #     if tr.cid in sample_trainer_cid:
+        #         tr.weight_divergence_test(epoch,
+        #                                   aggregated_gradient=aggregated_gradient,
+        #                                   trainer_gradient=None,
+        #                                   base_model=None)
 
         # clients download
         traffic += (parameter_count(
@@ -234,9 +238,13 @@ if __name__ == '__main__':
         writer.add_scalar("traffic(number_of_parameters)", traffic, global_step=epoch, walltime=None)
 
         writer.add_scalar("weight_divergence_avg", weight_divergence_avg, global_step=epoch, walltime=None)
+        weight_divergence_each_round.append(weight_divergence_avg)
 
         for cid in sample_trainer_cid:
             client_smapled_count[cid] += 1
+
+    weight_divergence_all_rounds_avg = sum(weight_divergence_each_round)/len(weight_divergence_each_round)
+    writer.add_scalar("weight_divergence_all_rounds_avg", weight_divergence_all_rounds_avg, global_step=0, walltime=None)
 
     print(client_smapled_count)
     if not num_pool == -1:

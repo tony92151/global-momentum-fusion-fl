@@ -49,7 +49,8 @@ class trainer:
         self.sampled_data = None
         ####
 
-        self.weight_divergence = None
+        # self.weight_divergence = None
+        self.weight_divergence = []
         if self.config.trainer.get_lossfun() == "crossentropy":
             self.loss_function = nn.CrossEntropyLoss()
 
@@ -62,10 +63,10 @@ class trainer:
 
     def set_mdoel(self, mod):
         self.last_model = copy.deepcopy(mod)
-        self.weight_divergence = OrderedDict()
-        names = [i[0] for i in self.last_model.named_parameters()]
-        for i in names:
-            self.weight_divergence[i] = 0.0
+        # self.weight_divergence = OrderedDict()
+        # names = [i[0] for i in self.last_model.named_parameters()]
+        # for i in names:
+        #     self.weight_divergence[i] = 0.0
 
     def sample_data_from_dataloader(self):
         self.sampled_data = []
@@ -194,6 +195,7 @@ class trainer:
                                lr=self.warmup.get_lr_from_step(round_),
                                device=self.device)
 
+        self.weight_divergence.append(wd)
         return wd
 
     def opt_step_base_model(self, base_gradient=None, round_=None, base_model=None):
