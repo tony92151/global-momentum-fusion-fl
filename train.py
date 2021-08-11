@@ -92,14 +92,17 @@ if __name__ == '__main__':
                end_step=config.trainer.get_end_step())
 
     print("\nInit dataloader...")
-    dataloaders = DATALOADER(config)
+    dataloaders, emb = DATALOADER(config=config, emd_measurement=True)
     if config.trainer.get_dataset_type() == "iid":
         dataloaders["train_s"] = dataloaders["train_s_iid"]
         print("\nUse iid dataloader...")
     else:
         print("\nUse non-iid dataloader...")
 
-    # Init trainersd
+    # write earth_moving_distance
+    writer.add_scalar("earth_moving_distance", emb, global_step=0, walltime=None)
+
+    # Init trainers
     print("\nInit trainers...")
     print("Nodes: {}".format(config.general.get_nodes()))
     trainers = []

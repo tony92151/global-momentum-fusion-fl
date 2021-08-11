@@ -9,6 +9,7 @@ from torch.utils.data import SubsetRandomSampler
 import torch.multiprocessing
 from utils.configer import Configer
 from PIL import Image
+from utils.weight_divergence.emd import earth_moving_distance
 import numpy as np
 # torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -312,7 +313,8 @@ def word_to_indices(word):
 
 
 #################################################################
-def DATALOADER(config: Configer = None):
+def DATALOADER(config: Configer = None, emd_measurement=False):
+    emd = -1
     # DATALOADER_TABLE = ["cifar10", "femnist", "shakespeare"]
     if config is None:
         raise ValueError("config shouldn't be none")
@@ -321,15 +323,21 @@ def DATALOADER(config: Configer = None):
                                         index_path=os.path.join(config.trainer.get_dataset_path(),
                                                                 "datatype", "index.json"),
                                         batch_size=config.trainer.get_local_bs())
+        if emd_measurement:
+            emd = earth_moving_distance(dataloaders=dataloaders["train_s"], number_of_calss=10)
     elif "femnist" in config.trainer.get_dataset_path():
         dataloaders = femnist_dataloaders(root=config.trainer.get_dataset_path(),
                                           batch_size=config.trainer.get_local_bs(),
                                           clients=config.general.get_nodes())
+        if emd_measurement:
+            emd = earth_moving_distance(dataloaders=dataloaders["train_s"], number_of_calss=62)
     elif "shakespeare" in config.trainer.get_dataset_path():
         dataloaders = shakespeare_dataloaders(root=config.trainer.get_dataset_path(),
                                               batch_size=config.trainer.get_local_bs(),
                                               clients=config.general.get_nodes())
+        if emd_measurement:
+            emd = earth_moving_distance(dataloaders=dataloaders["train_s"], number_of_calss=80)
 
     print("Total train data: {}".format(len(dataloaders["train"].dataset)))
     print("Total test data: {}".format(len(dataloaders["test"].dataset)))
-    return dataloaders
+    return dataloaders, emd
