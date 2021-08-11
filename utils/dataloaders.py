@@ -323,20 +323,32 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
                                         index_path=os.path.join(config.trainer.get_dataset_path(),
                                                                 "datatype", "index.json"),
                                         batch_size=config.trainer.get_local_bs())
-        if emd_measurement:
-            emd = earth_moving_distance(dataloaders=dataloaders["train_s"], number_of_calss=10)
+
     elif "femnist" in config.trainer.get_dataset_path():
         dataloaders = femnist_dataloaders(root=config.trainer.get_dataset_path(),
                                           batch_size=config.trainer.get_local_bs(),
                                           clients=config.general.get_nodes())
-        if emd_measurement:
-            emd = earth_moving_distance(dataloaders=dataloaders["train_s"], number_of_calss=62)
+
     elif "shakespeare" in config.trainer.get_dataset_path():
         dataloaders = shakespeare_dataloaders(root=config.trainer.get_dataset_path(),
                                               batch_size=config.trainer.get_local_bs(),
                                               clients=config.general.get_nodes())
-        if emd_measurement:
-            emd = earth_moving_distance(dataloaders=dataloaders["train_s"], number_of_calss=80)
+
+    if config.trainer.get_dataset_type() == "iid":
+        dataloaders["train_s"] = dataloaders["train_s_iid"]
+        print("\nUse iid dataloader...")
+    else:
+        print("\nUse non-iid dataloader...")
+
+    if emd_measurement:
+        number_of_calss = 0
+        if "cifar10" in config.trainer.get_dataset_path():
+            number_of_calss=10
+        elif "femnist" in config.trainer.get_dataset_path():
+            number_of_calss = 62
+        elif "shakespeare" in config.trainer.get_dataset_path():
+            number_of_calss = 80
+        emd = earth_moving_distance(dataloaders=dataloaders["train_s"], number_of_calss=number_of_calss)
 
     print("Total train data: {}".format(len(dataloaders["train"].dataset)))
     print("Total test data: {}".format(len(dataloaders["test"].dataset)))

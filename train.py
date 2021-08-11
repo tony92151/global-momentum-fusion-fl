@@ -93,11 +93,6 @@ if __name__ == '__main__':
 
     print("\nInit dataloader...")
     dataloaders, emb = DATALOADER(config=config, emd_measurement=True)
-    if config.trainer.get_dataset_type() == "iid":
-        dataloaders["train_s"] = dataloaders["train_s_iid"]
-        print("\nUse iid dataloader...")
-    else:
-        print("\nUse non-iid dataloader...")
 
     # write earth_moving_distance
     writer.add_scalar("earth_moving_distance", emb, global_step=0, walltime=None)
