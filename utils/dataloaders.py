@@ -350,6 +350,6 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
             number_of_calss = 80
         emd = earth_moving_distance(dataloaders=dataloaders["train_s"], number_of_calss=number_of_calss)
 
-    print("Total train data: {}".format(len(dataloaders["train"].dataset)))
+    print("\nTotal train data: {}".format(len(dataloaders["train"].dataset)))
     print("Total test data: {}".format(len(dataloaders["test"].dataset)))
     return dataloaders, emd
