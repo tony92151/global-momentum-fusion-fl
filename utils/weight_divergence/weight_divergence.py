@@ -50,9 +50,9 @@ def weight_divergence(config=None, aggregated_gradient=None, trainer_gradient=No
 
     wds = []
     for i, _ in enumerate(aggregated_gradient):
-        dv = torch.norm(
-            torch.add(aggregated_gradient[i].to(device), trainer_gradient[i].to(device), alpha=-1.0)) / \
-             torch.norm(W_SGD[i].to(device))
+        dv = (lr * torch.norm(torch.add(aggregated_gradient[i].to(device),
+                                        trainer_gradient[i].to(device),
+                                        alpha=-1.0))) / torch.norm(W_SGD[i].to(device))
         wds.append(dv)
 
     wds = sum(wds) / len(wds)
@@ -60,3 +60,22 @@ def weight_divergence(config=None, aggregated_gradient=None, trainer_gradient=No
     return wds
 
 
+def weight_divergence_mod(config=None,
+                          aggregated_gradient=None,
+                          trainer_gradient=None,
+                          device=torch.device('cpu')):
+    if config is None or \
+            aggregated_gradient is None or \
+            trainer_gradient is None:
+        raise ValueError("Error value while running weight_divergence function.")
+
+    aggregated_gradient = copy.deepcopy(aggregated_gradient["gradient"])
+    trainer_gradient = copy.deepcopy(trainer_gradient["gradient"])
+
+    wds = []
+
+    for ag, tg in zip(aggregated_gradient, trainer_gradient):
+        wds.append(torch.norm(torch.tensor(ag).to(device).add(torch.tensor(tg).to(device), alpha=-1.0)) /
+                   torch.norm(torch.tensor(tg).to(device)))
+
+    return sum(wds) / len(wds)

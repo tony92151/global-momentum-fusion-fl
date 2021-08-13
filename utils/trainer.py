@@ -20,7 +20,7 @@ from utils.configer import Configer
 from utils.opti import SERVEROPTS, FEDOPTS
 from utils.aggregator import set_gradient
 from torch_optimizer import Yogi
-from utils.weight_divergence.weight_divergence import weight_divergence
+from utils.weight_divergence.weight_divergence import weight_divergence, weight_divergence_mod
 
 
 class trainer:
@@ -188,12 +188,12 @@ class trainer:
         if base_model is None:
             base_model = self.last_model
 
-        wd = weight_divergence(config=self.config,
-                               aggregated_gradient=aggregated_gradient,
-                               trainer_gradient=trainer_gradient,
-                               base_model=base_model,
-                               lr=self.warmup.get_lr_from_step(round_),
-                               device=self.device)
+        wd = weight_divergence_mod(config=self.config,
+                                   aggregated_gradient=aggregated_gradient,
+                                   trainer_gradient=trainer_gradient,
+                                   base_model=base_model,
+                                   lr=self.warmup.get_lr_from_step(round_),
+                                   device=self.device)
 
         self.weight_divergence.append(wd)
         return wd
