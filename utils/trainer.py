@@ -191,8 +191,6 @@ class trainer:
         wd = weight_divergence_mod(config=self.config,
                                    aggregated_gradient=aggregated_gradient,
                                    trainer_gradient=trainer_gradient,
-                                   base_model=base_model,
-                                   lr=self.warmup.get_lr_from_step(round_),
                                    device=self.device)
 
         self.weight_divergence.append(wd)

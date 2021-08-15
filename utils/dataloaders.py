@@ -341,14 +341,14 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
         print("\nUse non-iid dataloader...")
 
     if emd_measurement:
-        number_of_calss = 0
+        number_of_class = 0
         if "cifar10" in config.trainer.get_dataset_path():
-            number_of_calss=10
+            number_of_class = 10
         elif "femnist" in config.trainer.get_dataset_path():
-            number_of_calss = 62
+            number_of_class = 62
         elif "shakespeare" in config.trainer.get_dataset_path():
-            number_of_calss = 80
-        emd = earth_moving_distance(dataloaders=dataloaders["train_s"], number_of_calss=number_of_calss)
+            number_of_class = 80
+        emd = earth_moving_distance(dataloaders=dataloaders["train_s"], number_of_class=number_of_class)
 
     print("\nTotal train data: {}".format(len(dataloaders["train"].dataset)))
     print("Total test data: {}".format(len(dataloaders["test"].dataset)))

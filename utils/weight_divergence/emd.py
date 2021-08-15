@@ -33,7 +33,7 @@ def earth_moving_distance(dataloaders: DataLoader = None, number_of_class=10):
     #  ]
     data_statistics = [[0 for _ in range(number_of_class)] for _ in dataloaders]
 
-    for i, v in tqdm(enumerate(dataloaders)):
+    for i, v in enumerate(dataloaders):
         for x, y in dataloaders[i]:
             for target in y:
                 data_statistics[i][int(target)] += 1
