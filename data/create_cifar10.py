@@ -1,13 +1,22 @@
 import pickle
 import os, json
 import random, copy
+import sys
 import time
 
 import numpy as np
 import argparse
 from shutil import copyfile
-
 import torchvision
+
+sys.path.append("../")
+from utils.weight_divergence.emd import earth_moving_distance
+from utils.dataloaders import cifar_dataloaders
+
+
+def set_seed(value):
+    np.random.seed(value)
+    random.seed(value)
 
 
 def unpickle(files):
@@ -63,11 +72,14 @@ cifar_path = ["cifar-10-batches-py/data_batch_1",
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--n', type=int, default=20)
-    parser.add_argument('--data', type=str, default="./cifar10")
+    parser.add_argument('--n', type=int, default=20, help="Separate to n datasets")
+    parser.add_argument('--data', type=str, default="./cifar10", help="Path to dataset")
     parser.add_argument('--download', type=bool, default=False)
     parser.add_argument('--num_shards', type=int, default=100, help="Default num_shards=100. Smaller num_shards will "
-                                                                    "make the dataset more non-iid.")
+                                                                    "make the dataset more non-iid.[200,100,80,50,40,"
+                                                                    "20]")
+    parser.add_argument('--seed', type=int, default=0)
+
     parser.add_argument('-f')
     args = parser.parse_args()
 
@@ -79,6 +91,7 @@ if __name__ == '__main__':
             raise ValueError("Folder: \"{}\" exist".format(path))
         os.makedirs(path)
         import gdown, tarfile
+
         # download
         dataset = torchvision.datasets.CIFAR10(root=path, train=True, download=True)
         url = 'https://drive.google.com/uc?id=1Knlvw0EUBNQFt8L5rB8ejS0gdUlh0zLY'
@@ -106,6 +119,10 @@ if __name__ == '__main__':
                 ans[dataset.targets[i]] += 1
             print("client: {} , {}, sum: {}".format(j, ans, sum(ans)))
 
+        cdataloders = cifar_dataloaders(root="./cifar10", index_path="./cifar10/niid/index.json", show=False)
+        emd = earth_moving_distance(dataloaders=cdataloders["train_s"], number_of_class=10)
+        print("\nEarth moving distance: ", emd)
+
         exit()
 
     path = os.path.abspath(args.data)
@@ -123,6 +140,10 @@ if __name__ == '__main__':
 
     os.makedirs(os.path.join(path, "iid"), exist_ok=True)
     os.makedirs(os.path.join(path, "niid"), exist_ok=True)
+
+    ######
+    set_seed(args.seed)
+    ######
 
     k = {'batch_label': '', 'labels': [], 'data': [], 'filenames': []}
 
@@ -156,7 +177,7 @@ if __name__ == '__main__':
 
     ############################################################
     # Total 50000 images
-    num_shards, num_imgs = 100, 500
+    num_shards, num_imgs = args.num_shards, int(50000 / args.num_shards)
     idx_shard = [i for i in range(num_shards)]
     ############################################################
     datas = []
@@ -189,6 +210,10 @@ if __name__ == '__main__':
     # print data
     for j in range(number_of_client):
         ans = [0 for i in range(10)]
-        for i in packages[int(j)]: 
-            ans[i[0]] +=1
+        for i in packages[int(j)]:
+            ans[i[0]] += 1
         print("client: {} ".format(j), ans, sum(ans))
+
+    cdataloders = cifar_dataloaders(root="./cifar10", index_path="./cifar10/niid/index.json", show=False)
+    emd = earth_moving_distance(dataloaders=cdataloders["train_s"], number_of_class=10)
+    print("\nEarth moving distance: ", emd)

@@ -139,12 +139,20 @@ def femnist_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     train_data = torch.load(os.path.join(root, "train_data.pt"))
     test_data = torch.load(os.path.join(root, "test_data.pt"))
 
-    if clients > len(train_data['users']):
-        raise ValueError(
-            "Request clients({}) larger than dataset provide({}).".format(clients, len(train_data['users'])))
+    if isinstance(clients, int):
+        print("Filter clients by position.")
+        if clients > len(train_data['users']):
+            raise ValueError(
+                "Request clients({}) larger than dataset provide({}).".format(clients, len(train_data['users'])))
 
-    train_data['users'] = train_data['users'][:clients]
-    test_data['users'] = test_data['users'][:clients]
+        train_data['users'] = train_data['users'][:clients]
+        test_data['users'] = test_data['users'][:clients]
+    elif isinstance(clients, list):
+        print("Filter clients by name_list.")
+        for name in clients:
+            if name not in train_data['users']:
+                raise ValueError("Client {} not found in dataset.".format(name))
+        train_data['users'] = clients
 
     # train_data_ = copy.deepcopy(train_data)
     # test_data_ = copy.deepcopy(test_data)

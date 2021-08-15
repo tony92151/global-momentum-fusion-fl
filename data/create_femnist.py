@@ -1,9 +1,16 @@
 import argparse
-import os, json
+import copy
 import glob
+import json
+import os
+import sys
 import time
 
 import torch
+
+sys.path.append("../")
+from utils.weight_divergence.emd import earth_moving_distance
+from utils.dataloaders import femnist_dataloaders
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -63,8 +70,16 @@ if __name__ == '__main__':
 
     os.makedirs(os.path.join(os.path.abspath("."), "femnist"), exist_ok=True)
     torch.save(train_data, os.path.join(os.path.abspath("."), "femnist", "train_data.pt"))
-    torch.save(test_data, os.path.join(os.path.abspath("."), "femnist", "test_data.pt"))
     print("\nSave : {}".format(os.path.join(os.path.abspath("."), "femnist", "train_data.pt")))
-    print("Save : {}".format(os.path.join(os.path.abspath("."), "femnist", "test_data.pt")))
+
+    torch.save(test_data, os.path.join(os.path.abspath("."), "femnist", "test_data.pt"))
+    print("\nSave : {}".format(os.path.join(os.path.abspath("."), "femnist", "test_data.pt")))
+
+    train_data_name = {'users': copy.deepcopy(test_data['users']), }
+    for name in train_data["users"]:
+        train_data['user_data'][name]['x'] = [0]
+    torch.save(train_data, os.path.join(os.path.abspath("."), "femnist", "train_data_name_target_only.pt"))
+    print("\nSave : {}".format(os.path.join(os.path.abspath("."), "femnist", "train_data_name_target_only.pt")))
+
     time.sleep(3)
     print("Done")
