@@ -54,9 +54,9 @@ def aggregater(gradient_list, device=torch.device("cpu"), aggrete_bn=False):
             bn_result.append(m_)
             bn_result.append(v_)
             bn_result.append(t_)
-        return {"gradient": agg_gradient, "bn": bn_result}
+        return {"gradient": agg_gradient, "bn": bn_result, "step_count": all_steps}
 
-    return {"gradient": agg_gradient}
+    return {"gradient": agg_gradient, "step_count": all_steps}
 
 
 def decompress(gradient, device=torch.device("cpu")):
