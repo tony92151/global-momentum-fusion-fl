@@ -64,7 +64,10 @@ cifar_path = ["cifar-10-batches-py/data_batch_1",
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--n', type=int, default=20)
+    parser.add_argument('--data', type=str, default="./cifar10")
     parser.add_argument('--download', type=bool, default=False)
+    parser.add_argument('--num_shards', type=int, default=100, help="Default num_shards=100. Smaller num_shards will "
+                                                                    "make the dataset more non-iid.")
     parser.add_argument('-f')
     args = parser.parse_args()
 
