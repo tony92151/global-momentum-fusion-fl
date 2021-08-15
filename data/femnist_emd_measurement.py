@@ -57,7 +57,7 @@ if __name__ == '__main__':
     print("\nSample {} users in dataset.".format(args.num_clients))
     sampled_clients_name = random.sample(train_data_name_target['users'], args.num_clients)
 
-    print(sampled_clients_name)
+    # print(sampled_clients_name)
     # cdataloders = femnist_dataloaders(root=root, clients=sampled_clients_name)
 
     trainloaders = []
@@ -71,9 +71,9 @@ if __name__ == '__main__':
     emd = earth_moving_distance(dataloaders=trainloaders, number_of_class=62)
     print("\nEarth moving distance: ", emd)
 
-    cdataloders = femnist_dataloaders(root=root, clients=sampled_clients_name)
-    emd = earth_moving_distance(dataloaders=cdataloders["train_s"], number_of_class=62)
-    print("\nEarth moving distance: ", emd)
+    # cdataloders = femnist_dataloaders(root=root, clients=sampled_clients_name)
+    # emd = earth_moving_distance(dataloaders=cdataloders["train_s"], number_of_class=62)
+    # print("\nEarth moving distance: ", emd)
 
 
     pass

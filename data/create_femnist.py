@@ -77,7 +77,8 @@ if __name__ == '__main__':
 
     train_data_name = {'users': copy.deepcopy(test_data['users']), }
     for name in train_data["users"]:
-        train_data['user_data'][name]['x'] = [0]
+        for i, _ in enumerate(train_data['user_data'][name]['x']):
+            train_data['user_data'][name]['x'][i] = [0]
     torch.save(train_data, os.path.join(os.path.abspath("."), "femnist", "train_data_name_target_only.pt"))
     print("\nSave : {}".format(os.path.join(os.path.abspath("."), "femnist", "train_data_name_target_only.pt")))
 

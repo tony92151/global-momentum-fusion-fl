@@ -115,18 +115,19 @@ class MNISTDataset(Dataset):
     """EMNIST dataset"""
 
     def __init__(self, feature, target, transform=None):
-        self.X = []
+        # self.X = []
         self.Y = target
-        if transform is not None:
-            for i in range(len(feature)):
-                self.X.append(transform(feature[i]))
-        else:
-            self.X = feature
+        self.transform = transform
+
+        self.X = feature
 
     def __len__(self):
         return len(self.X)
 
     def __getitem__(self, idx):
+        if self.transform is not None:
+            return self.transform(self.X[idx]), self.Y[idx]
+
         return self.X[idx], self.Y[idx]
 
 
