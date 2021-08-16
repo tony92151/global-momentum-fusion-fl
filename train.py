@@ -17,7 +17,7 @@ from utils.configer import Configer
 from utils.dataloaders import cifar_dataloaders, femnist_dataloaders, DATALOADER
 from utils.eval import evaluater
 from utils.models import MODELS
-from utils.trainer import trainer
+from utils.trainer import trainer, lstm_trainer
 
 
 def set_seed(seed):
@@ -101,6 +101,8 @@ if __name__ == '__main__':
     print("\nInit trainers...")
     print("Nodes: {}".format(config.general.get_nodes()))
     trainers = []
+    if "lstm" in config.trainer.get_model():
+        trainer = lstm_trainer
     for i in tqdm(range(config.general.get_nodes())):
         trainers.append(trainer(config=config,
                                 device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),

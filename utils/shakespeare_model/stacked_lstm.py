@@ -39,10 +39,24 @@ class LSTM_shakespeare(torch.nn.Module):
         self.lstm_2 = torch.nn.LSTM(hidden_dim_1, hidden_dim_2, nb_layers_2)
         self.hidden2out = torch.nn.Linear(hidden_dim_2, n_vocab)
 
-    def forward(self, seq_in):
-        embeddings = self.embeddings(seq_in.t())
-        lstm_out, _ = self.lstm_1(embeddings)
-        lstm_out, _ = self.lstm_2(lstm_out)
+    def forward(self, seq_in, state=None):
+        if state is not None:
+            embeddings = self.embeddings(seq_in.t())
+            lstm_out, h_state1 = self.lstm_1(embeddings, state["h1"])
+            lstm_out, h_state2 = self.lstm_2(lstm_out, state["h2"])
+        else:
+            embeddings = self.embeddings(seq_in.t())
+            lstm_out, h_state1 = self.lstm_1(embeddings)
+            lstm_out, h_state2 = self.lstm_2(lstm_out)
         ht = lstm_out[-1]
         out = self.hidden2out(ht)
-        return out
+        return out, {"h1": h_state1, "h2": h_state2}
+
+    def zero_state(self, batch_size, device=torch.device('cpu')):
+        zero_state = {
+            "h1": (torch.zeros(1, batch_size, self.hidden_dim_1).to(device),
+                   torch.zeros(1, batch_size, self.hidden_dim_1).to(device)),
+            "h2": (torch.zeros(1, batch_size, self.hidden_dim_2).to(device),
+                   torch.zeros(1, batch_size, self.hidden_dim_2).to(device))
+        }
+        return zero_state
