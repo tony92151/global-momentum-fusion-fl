@@ -307,3 +307,23 @@ class lstm_trainer(trainer):
         del optimizer
         del model
         return
+
+    def eval_run(self, round_):
+        model = copy.deepcopy(self.last_model)
+        model.eval().to(self.device)
+        self.print_("trainer >> cid: {} >> eval start, {}".format(self.cid, time.time()))
+        losses = []
+
+        lstm_state = model.zero_state(batch_size=self.config.trainer.get_local_bs(), device=self.device)
+        for data, target in self.sampled_data:
+            data = data.to(self.device)
+            target = target.to(self.device)
+            output, lstm_state = model(data, lstm_state)
+            loss = self.loss_function(output, target)
+            losses.append(loss.item())
+        losses = sum(losses) / len(losses)
+
+        if self.writer is not None:
+            self.writer.add_scalar("loss of {}".format(self.cid), losses, global_step=round_, walltime=None)
+
+        return

@@ -15,7 +15,7 @@ from sparse_optimizer.warmup import warmup
 from utils.aggregator import aggregater, decompress, compress, parameter_count
 from utils.configer import Configer
 from utils.dataloaders import cifar_dataloaders, femnist_dataloaders, DATALOADER
-from utils.eval import evaluater
+from utils.eval import evaluater, lstm_evaluater
 from utils.models import MODELS
 from utils.trainer import trainer, lstm_trainer
 
@@ -119,7 +119,9 @@ if __name__ == '__main__':
     for tr in trainers:
         tr.set_mdoel(net)
 
-    # Init trainers evaluater
+    # Init trainers evaluator
+    if "lstm" in config.trainer.get_model():
+        evaluater = lstm_evaluater
     ev = evaluater(config=config, dataloader=dataloaders["test"], device=torch.device("cuda:{}".format(gpus[0])),
                    writer=None)
 
