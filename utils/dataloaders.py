@@ -257,9 +257,15 @@ def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     train_data_all_y = []
     train_idx = []
     for i in train_data["users"]:
-        train_data_all_x += [word_to_indices(sen) for sen in train_data["user_data"][i]["x"]]
-        train_data_all_y += [word_to_indices(sen)[0] for sen in train_data["user_data"][i]["y"]]
-        train_idx.append(len(train_data["user_data"][i]["y"]))
+        # cut data to fit batch
+        x = [word_to_indices(sen) for sen in train_data["user_data"][i]["x"]]
+        x = x[:int(len(x)/batch_size)*batch_size]
+
+        y = [word_to_indices(sen)[0] for sen in train_data["user_data"][i]["y"]]
+        y = y[:int(len(y) / batch_size) * batch_size]
+        train_data_all_x += x
+        train_data_all_y += y
+        train_idx.append(len(x))
 
     train_dataset = SHDataset(train_data_all_x, train_data_all_y)
 
@@ -276,9 +282,15 @@ def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     test_data_all_y = []
     test_idx = []
     for i in test_data["users"]:
-        test_data_all_x += [word_to_indices(sen) for sen in test_data["user_data"][i]["x"]]
-        test_data_all_y += [word_to_indices(sen)[0] for sen in test_data["user_data"][i]["y"]]
-        test_idx.append(len(test_data["user_data"][i]["y"]))
+        # cut data to fit batch
+        x = [word_to_indices(sen) for sen in test_data["user_data"][i]["x"]]
+        x = x[:int(len(x) / batch_size) * batch_size]
+
+        y = [word_to_indices(sen)[0] for sen in test_data["user_data"][i]["y"]]
+        y = y[:int(len(y) / batch_size) * batch_size]
+        test_data_all_x += x
+        test_data_all_y += y
+        test_idx.append(len(x))
 
     test_dataset = SHDataset(test_data_all_x, test_data_all_y)
 

@@ -242,7 +242,7 @@ class trainer:
 
 class lstm_trainer(trainer):
     def __init__(self, **kwargs):
-        super().__init__(kwargs)
+        super(lstm_trainer, self).__init__(**kwargs)
 
     def train_run(self, round_, base_model=None):
         if base_model is None:
@@ -270,17 +270,16 @@ class lstm_trainer(trainer):
         self.print_("trainer >> cid: {} >> train start, {}".format(self.cid, time.time()))
         for i in range(self.config.trainer.get_local_ep()):
             losses = []
-            lstm_state = model.zero_state(device=self.device)
+            lstm_state = model.zero_state(batch_size=self.config.trainer.get_local_bs(), device=self.device)
             for data, target in self.sampled_data:
                 data = data.to(self.device)
                 target = target.to(self.device)
                 optimizer.zero_grad()
-                output, new_lstm_state = model(data, lstm_state)
+                output, lstm_state = model(data, lstm_state)
                 loss = self.loss_function(output, target)
-                losses.append(loss.item())
                 loss.backward()
+                losses.append(loss.item())
                 optimizer.step()
-                lstm_state = new_lstm_state
             losses = sum(losses) / len(losses)
             eploss.append(losses)
 

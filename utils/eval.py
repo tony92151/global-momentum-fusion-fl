@@ -83,3 +83,45 @@ class evaluater:
             self.writer.add_scalar("test loss", losses, global_step=round_, walltime=None)
             self.writer.add_scalar("test acc", acc, global_step=round_, walltime=None)
         return acc, losses
+
+
+class lstm_evaluater(evaluater):
+    def __init__(self, **kwargs):
+        super(lstm_evaluater, self).__init__(**kwargs)
+
+    def eval_run(self, model, round_=None):
+        if round_ is None:
+            round_ = self.round
+        losses = []
+        ans = np.array([])
+        res = np.array([])
+        correct = 0
+        model.eval().to(self.device)
+        self.print_("eval >> eval start, {}".format(time.time()))
+        lstm_state = model.zero_state(batch_size=self.config.trainer.get_local_bs(), device=self.device)
+        with torch.no_grad():
+            for data, target in self.sampled_data:
+                # data = data.view(data.size(0),-1)
+                data = data
+
+                data = data.to(self.device)
+                target = target.to(self.device)
+
+                output, lstm_state = model(data, lstm_state)
+
+                loss = self.loss_function(output, target)
+                losses.append(loss.item())
+
+                _, preds_tensor = output.max(1)
+                correct += preds_tensor.eq(target).sum().item()
+
+        losses = sum(losses) / len(losses)
+        acc = correct / len(self.dataloader.dataset)
+        self.print_("eval >> eval done, {}".format(time.time()))
+        if self.writer is not None:
+            self.writer.add_scalar("test loss", losses, global_step=round_, walltime=None)
+            self.writer.add_scalar("test acc", acc, global_step=round_, walltime=None)
+        return acc, losses
+
+
+
