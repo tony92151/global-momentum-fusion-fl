@@ -340,8 +340,10 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
     if config is None:
         raise ValueError("config shouldn't be none")
     if "cifar10" in config.trainer.get_dataset_path():
+        # if env variable dataset_path exist, overwrite it.
+        dataset_path = os.getenv('dataset_path', config.trainer.get_dataset_path())
         dataloaders = cifar_dataloaders(root=config.trainer.get_dataset_path(),
-                                        index_path=os.path.join(config.trainer.get_dataset_path(),
+                                        index_path=os.path.join(dataset_path,
                                                                 "datatype", "index.json"),
                                         batch_size=config.trainer.get_local_bs())
 

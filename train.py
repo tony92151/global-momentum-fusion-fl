@@ -52,6 +52,7 @@ if __name__ == '__main__':
     parser.add_argument('--output', help="output", type=str, default=None)
     parser.add_argument('--pool', help="Multiprocess Worker Pools", type=str, default="-1")
     parser.add_argument('--gpu', help="GPU usage. ex: 0,1,2", type=str, default="0")
+    parser.add_argument('--name_prefix', help="name_prefix", type=str, default="")
     args = parser.parse_args()
 
     if args.config is None or args.output is None:
@@ -83,7 +84,7 @@ if __name__ == '__main__':
                            str(int(time.time()))) if config.general.get_tbpath() == "./tblogs" \
         else config.general.get_tbpath()
 
-    writer = init_writer(tbpath=os.path.abspath(tb_path))
+    writer = init_writer(tbpath=args.name_prefix + os.path.abspath(tb_path))
 
     w = warmup(start_lr=config.trainer.get_start_lr(),
                max_lr=config.trainer.get_max_lr(),

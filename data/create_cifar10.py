@@ -94,12 +94,12 @@ if __name__ == '__main__':
 
         # download
         dataset = torchvision.datasets.CIFAR10(root=path, train=True, download=True)
-        url = 'https://drive.google.com/uc?id=1Knlvw0EUBNQFt8L5rB8ejS0gdUlh0zLY'
-        output = os.path.join(path, 'cifar10_c20.tar.gz')
+        url = 'https://drive.google.com/uc?id=1LKH6esIi7FxuXnKm6by2k38r2rv4bcIN'
+        output = os.path.join(path, 'cifar10_c20_5test.tar.gz')
         print("\nDownload ...")
         gdown.download(url, output, quiet=False)
         # check
-        md5 = 'a19efe2dd897835b4abdf1f959b19c9b'
+        md5 = '45146d116d92cfddda8c7c52a34908bc'
         gdown.cached_download(url, output, md5=md5, postprocess=gdown.extractall)
         time.sleep(3)
         # extraction
@@ -109,19 +109,26 @@ if __name__ == '__main__':
 
         time.sleep(1)
         # print data
-        file_ = open(os.path.join(path, "niid", "index.json"), 'r')
-        context_niid = json.load(file_)
-        file_.close()
+        # file_ = open(os.path.join(path, "niid", "index.json"), 'r')
+        # context_niid = json.load(file_)
+        # file_.close()
 
-        for j in range(len(context_niid.keys())):
-            ans = [0 for i in range(10)]
-            for i in context_niid[str(j)]:
-                ans[dataset.targets[i]] += 1
-            print("client: {} , {}, sum: {}".format(j, ans, sum(ans)))
+        # for j in range(len(context_niid.keys())):
+        #     ans = [0 for i in range(10)]
+        #     for i in context_niid[str(j)]:
+        #         ans[dataset.targets[i]] += 1
+        #     print("client: {} , {}, sum: {}".format(j, ans, sum(ans)))
+        emds = []
+        for i in range(1, 6):
+            cdataloders = cifar_dataloaders(root="./cifar10",
+                                            index_path="./cifar10/test{}/niid/index.json".format(i),
+                                            show=False)
+            emds.append(earth_moving_distance(dataloaders=cdataloders["train_s"], number_of_class=10))
 
-        cdataloders = cifar_dataloaders(root="./cifar10", index_path="./cifar10/niid/index.json", show=False)
-        emd = earth_moving_distance(dataloaders=cdataloders["train_s"], number_of_class=10)
-        print("\nEarth moving distance: ", emd)
+        # print("\nEarth moving distance: ", emd)
+        print("\n{:<10} {:<25}".format('Dataset', 'Earth moving distance'))
+        for i, val in enumerate(emds):
+            print("{:<10} {:<25}".format('test{}'.format(i+1), val))
 
         exit()
 
