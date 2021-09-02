@@ -357,7 +357,8 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
                                               batch_size=config.trainer.get_local_bs(),
                                               clients=config.general.get_nodes())
 
-    if config.trainer.get_dataset_type() == "iid":
+    datatype = os.getenv('dataset_type', config.trainer.get_dataset_type())
+    if datatype == "iid":
         dataloaders["train_s"] = dataloaders["train_s_iid"]
         print("\nUse iid dataloader...")
     else:

@@ -94,12 +94,12 @@ if __name__ == '__main__':
 
         # download
         dataset = torchvision.datasets.CIFAR10(root=path, train=True, download=True)
-        url = 'https://drive.google.com/uc?id=1LKH6esIi7FxuXnKm6by2k38r2rv4bcIN'
-        output = os.path.join(path, 'cifar10_c20_5test.tar.gz')
+        url = 'https://drive.google.com/uc?id=1SJnwvelXB_Mq1hVrFR5aiXHZduIktFj9'
+        output = os.path.join(path, 'cifar10_c20_6test.tar.gz')
         print("\nDownload ...")
         gdown.download(url, output, quiet=False)
         # check
-        md5 = '45146d116d92cfddda8c7c52a34908bc'
+        md5 = '0d8bce7ae2fd501873aaee4ff25ea5ea'
         gdown.cached_download(url, output, md5=md5, postprocess=gdown.extractall)
         time.sleep(3)
         # extraction
@@ -119,7 +119,7 @@ if __name__ == '__main__':
         #         ans[dataset.targets[i]] += 1
         #     print("client: {} , {}, sum: {}".format(j, ans, sum(ans)))
         emds = []
-        for i in range(1, 6):
+        for i in range(1, 7):
             cdataloders = cifar_dataloaders(root="./cifar10",
                                             index_path="./cifar10/test{}/niid/index.json".format(i),
                                             show=False)
