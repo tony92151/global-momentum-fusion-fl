@@ -25,8 +25,9 @@ def set_seed(seed):
     random.seed(seed)
 
 
-def init_writer(tbpath):
+def init_writer(tbpath, name_prefix=""):
     # tbpath = "/root/notebooks/tensorflow/logs/test"
+    tbpath = os.path.join(os.path.dirname(tbpath), name_prefix+tbpath.split("/")[-1])
     os.makedirs(tbpath, exist_ok=True)
     writer = SummaryWriter(tbpath)
     print("$ tensorboard --logdir={} --port 8123 --host 0.0.0.0 \n".format(os.path.dirname(tbpath)))
@@ -84,7 +85,7 @@ if __name__ == '__main__':
                            str(int(time.time()))) if config.general.get_tbpath() == "./tblogs" \
         else config.general.get_tbpath()
 
-    writer = init_writer(tbpath=args.name_prefix + os.path.abspath(tb_path))
+    writer = init_writer(tbpath=os.path.abspath(tb_path), name_prefix = args.name_prefix)
 
     w = warmup(start_lr=config.trainer.get_start_lr(),
                max_lr=config.trainer.get_max_lr(),
