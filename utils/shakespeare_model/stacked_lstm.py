@@ -27,7 +27,7 @@ import torch
 #         return out
 
 class LSTM_shakespeare_2L(torch.nn.Module):
-    def __init__(self, n_vocab=80, embedding_dim=8, hidden_dim_1=256, hidden_dim_2=256, nb_layers_1=1, nb_layers_2=1):
+    def __init__(self, n_vocab=80, embedding_dim=64, hidden_dim_1=256, hidden_dim_2=256, nb_layers_1=1, nb_layers_2=1):
         super(LSTM_shakespeare_2L, self).__init__()
 
         self.embedding_dim = embedding_dim
@@ -64,7 +64,7 @@ class LSTM_shakespeare_2L(torch.nn.Module):
 
 
 class LSTM_shakespeare_1L(torch.nn.Module):
-    def __init__(self, n_vocab=80, embedding_dim=8, hidden_dim_1=64, nb_layers_1=1):
+    def __init__(self, n_vocab=80, embedding_dim=64, hidden_dim_1=256, nb_layers_1=1):
         super(LSTM_shakespeare_1L, self).__init__()
 
         self.embedding_dim = embedding_dim
