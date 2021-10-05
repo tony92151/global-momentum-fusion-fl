@@ -108,6 +108,7 @@ if __name__ == '__main__':
                                     writer=writer,
                                     executor=executor)
     server = server(config=config)
+    set_seed(args.seed+1)
     net = client_manager.set_init_mdoel()
 
     # init traffic simulator (count number of parameters of transmitted gradient)
@@ -120,13 +121,13 @@ if __name__ == '__main__':
     print("\nStart training...")
     for epoch in tqdm(range(config.trainer.get_max_iteration())):
         # sample trainer
-        set_seed(args.set_seed+epoch)
+        set_seed(args.seed+epoch)
         sample_trainer_cid = random.sample(range(config.general.get_nodes()),
                                            round(config.general.get_nodes() * config.trainer.get_frac()))
         sample_trainer_cid = sorted(sample_trainer_cid)
 
         # sample dataset
-        set_seed(args.set_seed+epoch+1)
+        set_seed(args.seed+epoch+1)
         client_manager.set_sampled_trainer(sample_trainer_cid)
         client_manager.sample_data()
 
@@ -141,10 +142,10 @@ if __name__ == '__main__':
             gs[i]["gradient"] = decompress(gs[i]["gradient"])
 
         # aggregate
-        aggregated_gradient = server.aggregater(gs, aggrete_bn=False)
+        aggregated_gradient = server.aggregate(gs, aggrete_bn=False)
 
         # one set update
-        client_manager.opt_one_step(aggregated_gradient)
+        client_manager.opt_one_step(epoch, aggregated_gradient)
 
         # clients download
         traffic += (parameter_count(

@@ -68,7 +68,7 @@ export index_path="./data/cifar10/test$i/index.json"
 $pyenv train_1.py \
 --config ./configs/cifar10/$compress_method/config_1.ini \
 --tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.1 \
---output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.1 \ \
+--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.1 \
 --pool 5 \
 --seed $i \
 --gpu $gpu
@@ -78,7 +78,7 @@ export index_path="./data/cifar10/test$i/index.json"
 $pyenv train_1.py \
 --config ./configs/cifar10/$compress_method/config_3.ini \
 --tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.3 \
---output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.3 \ \
+--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.3 \
 --pool 5 \
 --seed $i \
 --gpu $gpu
@@ -99,7 +99,7 @@ export index_path="./data/cifar10/test$i/index.json"
 $pyenv train_1.py \
 --config ./configs/cifar10/$compress_method/config_7.ini \
 --tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.7 \
---output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.7 \ \
+--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.7 \
 --pool 5 \
 --seed $i \
 --gpu $gpu
@@ -110,7 +110,7 @@ export index_path="./data/cifar10/test$i/index.json"
 $pyenv train_1.py \
 --config ./configs/cifar10/$compress_method/config_9.ini \
 --tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.9 \
---output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.9 \ \
+--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.9 \
 --pool 5 \
 --seed $i \
 --gpu $gpu

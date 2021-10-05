@@ -22,10 +22,10 @@ from utils.trainer import trainer, lstm_trainer
 
 class client_manager:
     def __init__(self, config: Configer,
-                 gpus: list[int],
+                 gpus=0,
                  warmup_scheduler=None,
                  writer=None,
-                 executor: ThreadPoolExecutor = None):
+                 executor=None):
         self.trainers = []
         self.config = config
         self.executor = executor
@@ -73,7 +73,7 @@ class client_manager:
 
         return net
 
-    def set_sampled_trainer(self, cids: list[int]):
+    def set_sampled_trainer(self, cids):
         self.sampled_trainer = cids
 
     def sample_data(self):
