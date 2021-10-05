@@ -94,12 +94,12 @@ if __name__ == '__main__':
 
         # download
         dataset = torchvision.datasets.CIFAR10(root=path, train=True, download=True)
-        url = 'https://drive.google.com/uc?id=1SJnwvelXB_Mq1hVrFR5aiXHZduIktFj9'
-        output = os.path.join(path, 'cifar10_c20_6test.tar.gz')
+        url = 'https://drive.google.com/uc?id=1jTYZbx4kzJkP7MFyWPeAMAk8DAzMZWFj'
+        output = os.path.join(path, 'cifar10_c20_7test.tar.gz')
         print("\nDownload ...")
         gdown.download(url, output, quiet=False)
         # check
-        md5 = '0d8bce7ae2fd501873aaee4ff25ea5ea'
+        md5 = '31e120398e85ed036352fab4b8d58bd9'
         gdown.cached_download(url, output, md5=md5, postprocess=gdown.extractall)
         time.sleep(3)
         # extraction
@@ -119,16 +119,16 @@ if __name__ == '__main__':
         #         ans[dataset.targets[i]] += 1
         #     print("client: {} , {}, sum: {}".format(j, ans, sum(ans)))
         emds = []
-        for i in range(1, 7):
+        for i in range(0, 7):
             cdataloders = cifar_dataloaders(root="./cifar10",
-                                            index_path="./cifar10/test{}/niid/index.json".format(i),
+                                            index_path="./cifar10/test{}/index.json".format(i),
                                             show=False)
             emds.append(earth_moving_distance(dataloaders=cdataloders["train_s"], number_of_class=10))
 
         # print("\nEarth moving distance: ", emd)
         print("\n{:<10} {:<25}".format('Dataset', 'Earth moving distance'))
         for i, val in enumerate(emds):
-            print("{:<10} {:<25}".format('test{}'.format(i+1), val))
+            print("{:<10} {:<25}".format('test{}'.format(i+1), round(val, 2)))
 
         exit()
 

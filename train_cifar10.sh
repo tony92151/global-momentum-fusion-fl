@@ -15,14 +15,9 @@ then
   name_prefix=""
 fi
 
-if [ -z "cifar10_subfolder" ]
+if [ -z "tbpath" ]
 then
-  name_prefix=""
-fi
-
-if [ -z "datatype" ]
-then
-  datatype="niid"
+  tbpath="cifar10_repo_exp"
 fi
 
 if [ -z "compress_method" ]
@@ -30,15 +25,19 @@ then
   compress_method="DGC"
 fi
 
+
+
+
 echo "Python interpreter: $pyenv"
 echo "Torch version : $($pyenv -c 'import torch; print(torch.__version__)')"
 echo "GPU : $gpu"
+echo "tbpath : $tbpath"
 
 #######################################################
 # environment variable overwrite
 # This will overwrite parameter in .ini file while initializing the dataloader
-export dataset_path="./data/cifar10/$cifar10_subfolder"
-export dataset_type=$datatype
+
+#export compress_method="DGC"
 #######################################################
 
 ## fedavg iid
@@ -59,36 +58,62 @@ export dataset_type=$datatype
 
 ############################################################################################################
 ############################################################################################################
+tbpath="cifar10_repo_exp"
 
-
+# i = 0,1,2,3,4,5,6
+for (( i = 0; i < 7; i++ ))
+do
 # compress ratio 0.1
-$pyenv train.py --config ./configs/cifar10/$compress_method/config_1.ini --output ./save/cifar10_final --pool 5 --gpu $gpu --name_prefix $name_prefix
-sleep 10
-## dgc 0.2
-#$pyenv train.py --config ./configs/cifar10/$compress_method/config_2.ini --output ./save/cifar10_final --pool 5 --gpu $gpu --name_prefix $name_prefix
-#sleep 10
-# compress ratio 0.3
-$pyenv train.py --config ./configs/cifar10/$compress_method/config_3.ini --output ./save/cifar10_final --pool 5 --gpu $gpu --name_prefix $name_prefix
-sleep 10
-## compress ratio 0.4
-#$pyenv train.py --config ./configs/cifar10/$compress_method/config_4.ini --output ./save/cifar10_final --pool 5 --gpu $gpu --name_prefix $name_prefix
-#sleep 10
-# compress ratio 0.5
-$pyenv train.py --config ./configs/cifar10/$compress_method/config_5.ini --output ./save/cifar10_final --pool 5 --gpu $gpu --name_prefix $name_prefix
-sleep 10
+export index_path="./data/cifar10/test$i/index.json"
+$pyenv train_1.py \
+--config ./configs/cifar10/$compress_method/config_1.ini \
+--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.1 \
+--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.1 \ \
+--pool 5 \
+--seed $i \
+--gpu $gpu
 
-## compress ratio 0.6
-#$pyenv train.py --config ./configs/cifar10/$compress_method/config_6.ini --output ./save/cifar10_final --pool 5 --gpu $gpu --name_prefix $name_prefix
-#sleep 10
+# compress ratio 0.3
+export index_path="./data/cifar10/test$i/index.json"
+$pyenv train_1.py \
+--config ./configs/cifar10/$compress_method/config_3.ini \
+--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.3 \
+--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.3 \ \
+--pool 5 \
+--seed $i \
+--gpu $gpu
+
+# compress ratio 0.5
+export index_path="./data/cifar10/test$i/index.json"
+$pyenv train_1.py \
+--config ./configs/cifar10/$compress_method/config_5.ini \
+--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.5 \
+--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.5 \ \
+--pool 5 \
+--seed $i \
+--gpu $gpu
+
+
 # compress ratio 0.7
-$pyenv train.py --config ./configs/cifar10/$compress_method/config_7.ini --output ./save/cifar10_final --pool 5 --gpu $gpu --name_prefix $name_prefix
-sleep 10
-## compress ratio 0.8
-#$pyenv train.py --config ./configs/cifar10/$compress_method/config_8.ini --output ./save/cifar10_final --pool 5 --gpu $gpu --name_prefix $name_prefix
-#sleep 10
+export index_path="./data/cifar10/test$i/index.json"
+$pyenv train_1.py \
+--config ./configs/cifar10/$compress_method/config_7.ini \
+--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.7 \
+--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.7 \ \
+--pool 5 \
+--seed $i \
+--gpu $gpu
+
+
 # compress ratio 0.9
-$pyenv train.py --config ./configs/cifar10/$compress_method/config_9.ini --output ./save/cifar10_final --pool 5 --gpu $gpu --name_prefix $name_prefix
-sleep 10
-# compress ratio 1.0
-#$pyenv train.py --config ./configs/cifar10/$compress_method/config_10.ini --output ./save/cifar10_final --pool 5 --gpu $gpu --name_prefix $name_prefix
-#sleep 10
+export index_path="./data/cifar10/test$i/index.json"
+$pyenv train_1.py \
+--config ./configs/cifar10/$compress_method/config_9.ini \
+--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.9 \
+--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.9 \ \
+--pool 5 \
+--seed $i \
+--gpu $gpu
+
+
+done

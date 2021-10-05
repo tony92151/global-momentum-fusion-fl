@@ -68,7 +68,7 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
 
     testset = torchvision.datasets.CIFAR10(root=root, train=False, download=True, transform=transform_train)
     ################################################################################################
-    file_ = open(index_path.replace("datatype", "niid"), 'r')
+    file_ = open(index_path, 'r')
     context = json.load(file_)
     file_.close()
 
@@ -81,17 +81,6 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
                                                         sampler=SubsetSampler(context[str(i)])))
 
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
-    ################################################################################################
-    file_ = open(index_path.replace("datatype", "iid"), 'r')
-    context2 = json.load(file_)
-    file_.close()
-
-    trainloaders_iid = []
-    for i in range(len(context2.keys())):
-        trainloaders_iid.append(torch.utils.data.DataLoader(trainset,
-                                                            batch_size=batch_size,
-                                                            sampler=SubsetSampler(context2[str(i)])))
-    ################################################################################################
     if show:
         for j in range(len(context.keys())):
             ans = [0 for i in range(10)]
@@ -107,8 +96,8 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
     return {"test": testloader,
             "train": trainloader,
             "train_s": trainloaders,
-            "test_s": None,
-            "train_s_iid": trainloaders_iid}
+            "test_s": None
+            }
 
 
 class MNISTDataset(Dataset):
@@ -341,10 +330,9 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
         raise ValueError("config shouldn't be none")
     if "cifar10" in config.trainer.get_dataset_path():
         # if env variable dataset_path exist, overwrite it.
-        dataset_path = os.getenv('dataset_path', config.trainer.get_dataset_path())
+        # dataset_path = os.getenv('dataset_path', config.trainer.get_dataset_path())
         dataloaders = cifar_dataloaders(root=config.trainer.get_dataset_path(),
-                                        index_path=os.path.join(dataset_path,
-                                                                "datatype", "index.json"),
+                                        index_path=os.getenv('index_path', config.trainer.get_dataset_path()),
                                         batch_size=config.trainer.get_local_bs())
 
     elif "femnist" in config.trainer.get_dataset_path():
