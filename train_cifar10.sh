@@ -88,7 +88,7 @@ export index_path="./data/cifar10/test$i/index.json"
 $pyenv train_1.py \
 --config ./configs/cifar10/$compress_method/config_5.ini \
 --tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.5 \
---output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.5 \ \
+--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.5 \
 --pool 5 \
 --seed $i \
 --gpu $gpu
