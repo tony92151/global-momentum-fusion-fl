@@ -135,7 +135,7 @@ class Configer:
             print("config read: skip gfgc")
 
         try:
-            self.config_sgc = config_sgc(self.config)
+            self.sgc = config_sgc(self.config)
         except KeyError:
             print("config read: skip sgc")
 

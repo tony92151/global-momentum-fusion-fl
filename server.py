@@ -24,8 +24,9 @@ from utils.trainer import trainer, lstm_trainer
 class server:
     def __init__(self, config: Configer, device=torch.device("cpu")):
         self.config = config
-        if self.config.trainer.get_optimizer() == "SDCSGD":
-            self.aggregater = momentum_aggregater(device=device)
+        if self.config.trainer.get_optimizer() == "SGCSGD":
+            self.aggregater = momentum_aggregater(server_momentun=config.sgc.get_global_momentum(),
+                                                  device=device)
         else:
             self.aggregater = aggregater(device=device)
 

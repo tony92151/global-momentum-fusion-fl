@@ -59,7 +59,7 @@ class SGCSGD(BASE_SGD):
 class SPCMemory(Memory):
     def __init__(self, momentum=0.9, device=torch.device("cpu")):
 
-        super(SPCMemory, self).__init__(momentum=1.0,
+        super(SPCMemory, self).__init__(momentum=momentum,
                                         device=device)
     
     def compensate(self, gradient):
@@ -81,7 +81,7 @@ class SPCMemory(Memory):
 
     def update(self, compressed_gradient):
         momentums_tmp = copy.deepcopy(self.momentums)
-        momentums_tmp = [i.to(self.device) for i in momentums_tmp]
+        momentums_tmp = [torch.tensor(i) for i in momentums_tmp]
         # Momentun Approximation
         new_compressed_gradient = []
         for j, m in zip(compressed_gradient, momentums_tmp):
@@ -89,7 +89,7 @@ class SPCMemory(Memory):
             selected_mem, ctx = j
             shape, mask, numel = ctx
             # add
-            selected_mem = torch.tensor(selected_mem).add(momentums_tmp[mask>0]).tolist()
+            selected_mem = torch.tensor(selected_mem).add(m.flatten()[torch.tensor(mask)>0].cpu()).tolist()
             # pack
             j = selected_mem, ctx
             new_compressed_gradient.append(j)

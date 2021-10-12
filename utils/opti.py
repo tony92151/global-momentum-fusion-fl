@@ -5,8 +5,11 @@ import torch
 from copy import deepcopy as dcopy
 from torch_optimizer import Yogi
 from utils.configer import Configer
+############################################
 from sparse_optimizer.globalfusion.optimizer import GFDGCSGD
 from sparse_optimizer.dgcsgd.optimizer import DGCSGD
+from sparse_optimizer.sgcsgd.optimizer import SGCSGD
+############################################
 # from sparse_optimizer.sgcsgd.optimizer import 
 
 SERVEROPT = {"SGD": SGD,
@@ -36,7 +39,8 @@ def SERVEROPTS(config: Configer = None, params=None, lr=None, **kwargs):
 
 
 FEDOPT = {"GFDGCSGD": GFDGCSGD,
-          "DGCSGD": DGCSGD}
+          "DGCSGD": DGCSGD,
+          "SGCSGD": SGCSGD}
 
 
 def FEDOPTS(config: Configer = None, params=None, lr=None, **kwargs):

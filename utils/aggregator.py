@@ -115,7 +115,7 @@ class momentum_aggregater(aggregater):
         if self.server_v is None:
             self.server_v = agg_gradient
         else:
-            self.server_v = torch.mul(self.server_momentun, self.server_v).add_(agg_gradient)
+            self.server_v = [torch.mul(self.server_momentun, v).add_(agg_gradient[i]) for i, v in enumerate(self.server_v)]
 
         if 'bn' in gradient_list[0].keys() and aggrete_bn:
             bn_result = []
