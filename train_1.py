@@ -107,7 +107,7 @@ if __name__ == '__main__':
                                     warmup_scheduler=w,
                                     writer=writer,
                                     executor=executor)
-    server = server(config=config)
+    server = server(config=config, device=torch.device("cuda:{}".format(gpus[0])))
     set_seed(args.seed+1)
     net = client_manager.set_init_mdoel()
 

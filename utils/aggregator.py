@@ -36,7 +36,7 @@ class aggregater:
     def __init__(self, device=torch.device("cpu")):
         self.device = device
 
-    def aggregater(self, gradient_list, aggrete_bn=False):
+    def aggregate(self, gradient_list, aggrete_bn=False):
         agg_gradient = []
         all_steps = sum([j["step_count"] for j in gradient_list])
         for i in range(len(gradient_list[0]["gradient"])):

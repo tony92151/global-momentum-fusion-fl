@@ -22,13 +22,13 @@ from utils.trainer import trainer, lstm_trainer
 
 
 class server:
-    def __init__(self, config: Configer):
+    def __init__(self, config: Configer, device=torch.device("cpu")):
         self.config = config
         if self.config.trainer.get_optimizer() == "SDCSGD":
-            self.aggregater = momentum_aggregater(torch.device("gpu:0"))
+            self.aggregater = momentum_aggregater(device=device)
         else:
-            self.aggregater = aggregater(torch.device("gpu:0"))
+            self.aggregater = aggregater(device=device)
 
     def aggregate(self, gs: List[dict], aggrete_bn=False):
-        aggregated_gradient = self.aggregater(gs, aggrete_bn=aggrete_bn)
+        aggregated_gradient = self.aggregater.aggregate(gs, aggrete_bn=aggrete_bn)
         return aggregated_gradient
