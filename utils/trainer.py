@@ -1,26 +1,11 @@
-import glob
-from shutil import copyfile
-from collections import OrderedDict
 import torch
 import torch.nn as nn
-from torchvision import transforms
-from torch.utils.data import DataLoader, TensorDataset, Dataset
-from torch.utils.data.sampler import SubsetRandomSampler
-from torch import optim
-import argparse
-import base64
-import io, os, json
 import time
 import copy
-import random
-import numpy as np
-from sparse_optimizer.globalfusion.gfcompressor import GFCCompressor
-from sparse_optimizer.globalfusion.optimizer import GFDGCSGD
 from utils.configer import Configer
 from utils.opti import SERVEROPTS, FEDOPTS
 from utils.aggregator import set_gradient
-from torch_optimizer import Yogi
-from utils.weight_divergence.weight_divergence import weight_divergence, weight_divergence_mod
+from utils.weight_divergence.weight_divergence import weight_divergence_mod
 
 
 class trainer:
