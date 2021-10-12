@@ -32,31 +32,36 @@ def add_mean_var(means=None, vrs=None, tracks=None):
     return mean_result.tolist(), vr_result.tolist(), tracks_sum
 
 
-def aggregater(gradient_list, device=torch.device("cpu"), aggrete_bn=False):
-    agg_gradient = []
-    all_steps = sum([j["step_count"] for j in gradient_list])
-    for i in range(len(gradient_list[0]["gradient"])):
-        result = torch.sum(torch.stack([j["gradient"][i].mul_(j["step_count"]).to(device) for j in gradient_list]),
-                           dim=0)
-        agg_gradient.append(result.mul_(1.0 / all_steps))
+class aggregater:
+    def __init__(self, device=torch.device("cpu")):
+        self.device = device
 
-    if 'bn' in gradient_list[0].keys() and aggrete_bn:
-        bn_result = []
-        for i in range(0, len(gradient_list[0]["bn"]), 3):
-            m = []
-            v = []
-            t = []
-            for j in gradient_list:
-                m.append(j["bn"][i])
-                v.append(j["bn"][i + 1])
-                t.append(j["bn"][i + 2])
-            m_, v_, t_ = add_mean_var(m, v, t)
-            bn_result.append(m_)
-            bn_result.append(v_)
-            bn_result.append(t_)
-        return {"gradient": agg_gradient, "bn": bn_result, "step_count": all_steps}
+    def aggregater(self, gradient_list, aggrete_bn=False):
+        agg_gradient = []
+        all_steps = sum([j["step_count"] for j in gradient_list])
+        for i in range(len(gradient_list[0]["gradient"])):
+            result = torch.sum(
+                torch.stack([j["gradient"][i].mul_(j["step_count"]).to(self.device) for j in gradient_list]),
+                dim=0)
+            agg_gradient.append(result.mul_(1.0 / all_steps))
 
-    return {"gradient": agg_gradient, "step_count": all_steps}
+        if 'bn' in gradient_list[0].keys() and aggrete_bn:
+            bn_result = []
+            for i in range(0, len(gradient_list[0]["bn"]), 3):
+                m = []
+                v = []
+                t = []
+                for j in gradient_list:
+                    m.append(j["bn"][i])
+                    v.append(j["bn"][i + 1])
+                    t.append(j["bn"][i + 2])
+                m_, v_, t_ = add_mean_var(m, v, t)
+                bn_result.append(m_)
+                bn_result.append(v_)
+                bn_result.append(t_)
+            return {"gradient": agg_gradient, "bn": bn_result, "step_count": all_steps}
+
+        return {"gradient": agg_gradient, "step_count": all_steps}
 
 
 def decompress(gradient, device=torch.device("cpu")):
@@ -91,3 +96,41 @@ def set_gradient(opt, cg):
     for group in opt.param_groups:
         for p in range(len(group['params'])):
             group['params'][p].grad = dcopy(agged_grad[p]).to(group['params'][p].device)
+
+
+class momentum_aggregater(aggregater):
+    def __init__(self, server_momentun, device=torch.device("cpu")):
+        self.server_momentun = torch.tensor(server_momentun)
+        self.server_v = None
+        super().__init__(device)
+
+    def aggregate(self, gradient_list, aggrete_bn=False):
+        agg_gradient = []
+        all_steps = sum([j["step_count"] for j in gradient_list])
+        for i in range(len(gradient_list[0]["gradient"])):
+            result = torch.sum(torch.stack([j["gradient"][i].mul_(j["step_count"]).to(self.device) for j in gradient_list]),
+                               dim=0)
+            agg_gradient.append(result.mul_(1.0 / all_steps))
+
+        if self.server_v is None:
+            self.server_v = agg_gradient
+        else:
+            self.server_v = torch.mul(self.server_momentun, self.server_v).add_(agg_gradient)
+
+        if 'bn' in gradient_list[0].keys() and aggrete_bn:
+            bn_result = []
+            for i in range(0, len(gradient_list[0]["bn"]), 3):
+                m = []
+                v = []
+                t = []
+                for j in gradient_list:
+                    m.append(j["bn"][i])
+                    v.append(j["bn"][i + 1])
+                    t.append(j["bn"][i + 2])
+                m_, v_, t_ = add_mean_var(m, v, t)
+                bn_result.append(m_)
+                bn_result.append(v_)
+                bn_result.append(t_)
+            return {"gradient": self.server_v, "bn": bn_result, "step_count": all_steps}
+
+        return {"gradient": self.server_v, "step_count": all_steps}
