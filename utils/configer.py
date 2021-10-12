@@ -1,6 +1,8 @@
 import configparser
 from utils.compressor.dgc import config_dgc
 from utils.compressor.gf import config_gf
+from utils.compressor.gfgc import config_gfgc
+from utils.compressor.sgc import config_sgc
 
 
 class config_general:
@@ -117,5 +119,23 @@ class Configer:
         self.eval = config_eval(self.config)
         self.agg = config_agg(self.config)
 
-        self.dgc = config_dgc(self.config)
-        self.gf = config_gf(self.config)
+        try:
+            self.dgc = config_dgc(self.config)
+        except KeyError:
+            print("config read: skip dgc")
+
+        try:
+            self.gf = config_gf(self.config)
+        except KeyError:
+            print("config read: skip gf")
+
+        try:
+            self.gfgc = config_gfgc(self.config)
+        except KeyError:
+            print("config read: skip gfgc")
+
+        try:
+            self.config_sgc = config_sgc(self.config)
+        except KeyError:
+            print("config read: skip sgc")
+
