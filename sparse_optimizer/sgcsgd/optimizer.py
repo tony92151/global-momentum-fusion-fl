@@ -25,7 +25,7 @@ class SGCSGD(BASE_SGD):
         if weight_decay < 0.0:
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
 
-        self.memory = SPCMemory(momentum=dgc_momentum, device=device)
+        self.memory = SGCMemory(momentum=dgc_momentum, device=device)
         self.compressor = topkCompressor(compress_ratio=compress_ratio, device=device)
         self.device = device
         ######
@@ -56,10 +56,10 @@ class SGCSGD(BASE_SGD):
         self.memory.set_compressed_mem(self.memory.mem)
 
     
-class SPCMemory(Memory):
+class SGCMemory(Memory):
     def __init__(self, momentum=0.9, device=torch.device("cpu")):
 
-        super(SPCMemory, self).__init__(momentum=momentum,
+        super(SGCMemory, self).__init__(momentum=momentum,
                                         device=device)
     
     def compensate(self, gradient):
