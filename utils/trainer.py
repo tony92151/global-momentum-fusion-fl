@@ -120,6 +120,12 @@ class trainer:
         ############################################################
         if self.config.trainer.get_optimizer() == "SGCSGD":
             optimizer.compress(compress=True)
+
+        elif self.config.trainer.get_optimizer() == "GFGCSGD":
+            if round_ < self.config.trainer.get_base_step() and self.config.gfgc.get_global_fusion_after_warmup():
+                optimizer.compress(compress=True)
+            else:
+                optimizer.compress(global_momentum=self.global_momentum, compress=True)
         else:
             if self.config.dgc.get_dgc():
                 if not self.config.gf.get_global_fusion() or \

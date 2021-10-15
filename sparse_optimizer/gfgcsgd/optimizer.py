@@ -32,20 +32,14 @@ class GFGCSGD(BASE_SGD):
         if self.verbose:
             print(val)
 
-    def compress(self, global_momentum=None, compress: bool = True, momentum_correction: bool = False):
-        if momentum_correction:
-            self.print_("optimizer >> compensate, {}".format(time.time()))
-            compensated_gradient = self.memory.compensate(self.memory.mem["gradient"])
-            self.print_("optimizer >> compress, {}".format(time.time()))
-            compress_result = self.compressor.compress(mem=compensated_gradient, gmome=global_momentum,
-                                                       compress=compress)
-            self.print_("optimizer >> compress done, {}".format(time.time()))
-            self.memory.update(compress_result)
-        else:
-            self.print_("optimizer >> compress, {}".format(time.time()))
-            compress_result = self.compressor.compress(mem=self.memory.mem["gradient"], gmome=global_momentum,
-                                                       compress=compress)
-            self.print_("optimizer >> compress done, {}".format(time.time()))
+    def compress(self, global_momentum=None, compress: bool = True):
+        self.print_("optimizer >> compensate, {}".format(time.time()))
+        compensated_gradient = self.memory.compensate(self.memory.mem["gradient"])
+        self.print_("optimizer >> compress, {}".format(time.time()))
+        compress_result = self.compressor.compress(mem=compensated_gradient, gmome=global_momentum,
+                                                   compress=compress)
+        self.print_("optimizer >> compress done, {}".format(time.time()))
+        self.memory.update(compress_result)
 
         # bn shouldn't be compressed
         if 'bn' in self.memory.mem.keys():
