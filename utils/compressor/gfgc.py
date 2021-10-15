@@ -28,3 +28,9 @@ class config_gfgc:
             return False
         elif self.config["momentum_correction"] == "True":
             return True
+
+    def get_global_fusion_after_warmup(self) -> bool:
+        if self.config["global_fusion_after_warmup"] == "False":
+            return False
+        elif self.config["global_fusion_after_warmup"] == "True":
+            return True
