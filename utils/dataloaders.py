@@ -255,7 +255,8 @@ def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
         y = [word_to_indices(sen)[0] for sen in train_data["user_data"][u]['y']]
         y = y[:int(len(y) / batch_size) * batch_size]
 
-        trainloaders.append(SHDataset(x, y))
+        traloader = torch.utils.data.DataLoader(SHDataset(x, y), batch_size=batch_size, shuffle=False)
+        trainloaders.append(traloader)
 
 
     # for i in train_data["users"]:
