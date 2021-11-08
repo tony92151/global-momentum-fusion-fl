@@ -211,14 +211,14 @@ class trainer:
         # optimizer.one_step(base_gradient["gradient"])
         set_gradient(opt=optimizer, cg=base_gradient["gradient"])
         optimizer.step()
-        if 'bn' in self.last_gradient.keys():
-            idx = 0
-            for layer in model.cpu().modules():
-                if isinstance(layer, torch.nn.BatchNorm2d):
-                    layer.running_mean = torch.tensor(self.last_gradient["bn"][idx]).clone().detach()
-                    layer.running_var = torch.tensor(self.last_gradient["bn"][idx + 1]).clone().detach()
-                    layer.num_batches_tracked = torch.tensor(self.last_gradient["bn"][idx + 2]).clone().detach()
-                    idx += 3
+        # if 'bn' in self.last_gradient.keys():
+        #     idx = 0
+        #     for layer in model.cpu().modules():
+        #         if isinstance(layer, torch.nn.BatchNorm2d):
+        #             layer.running_mean = torch.tensor(self.last_gradient["bn"][idx]).clone().detach()
+        #             layer.running_var = torch.tensor(self.last_gradient["bn"][idx + 1]).clone().detach()
+        #             layer.num_batches_tracked = torch.tensor(self.last_gradient["bn"][idx + 2]).clone().detach()
+        #             idx += 3
         self.last_model = copy.deepcopy(model)
         self.last_de_gradient = copy.deepcopy(base_gradient)
         # self.last_onestep_state = optimizer.state_dict()
