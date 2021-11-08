@@ -7,10 +7,11 @@ import torch
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', type=str, default="/leaf/data/shakespeare/data")
+    parser.add_argument('--download', action='store_true')
     parser.add_argument('-f')
     args = parser.parse_args()
 
-    if args.data == "download":
+    if args.download:
         if os.path.exists(os.path.abspath("./shakespeare")):
             raise ValueError("Folder: \"{}\" exist".format(os.path.abspath("./femnist")))
         os.makedirs(os.path.abspath("./shakespeare"))

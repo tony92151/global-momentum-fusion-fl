@@ -72,3 +72,11 @@ Or just download it by
 ```python
 python3 ./create_shakespeare.py --data download
 ```
+
+### Sentiment140
+
+fellow this [repo](https://github.com/TalwalkarLab/leaf/tree/master/data/sent140)
+```shell
+./preprocess.sh -s niid --sf 0.01 -k 3 -t sample --smplseed 123 --spltseed 123
+```
+

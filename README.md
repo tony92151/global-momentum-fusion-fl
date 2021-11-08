@@ -26,5 +26,7 @@ test6    |  1.35
 In our experiment:
 gpu=0 tbpath=./cifar10_repo_test compress_method="DGC" bash train_cifar10.sh
 gpu=0 tbpath=./cifar10_repo_test compress_method="GFDGC" bash train_cifar10.sh
+gpu=0 tbpath=./cifar10_repo_test compress_method="SGC" bash train_cifar10.sh
+gpu=0 tbpath=./cifar10_repo_test compress_method="GFGC" bash train_cifar10.sh
 
 ```

@@ -245,27 +245,40 @@ def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     train_data_all_x = []
     train_data_all_y = []
     train_idx = []
-    for i in train_data["users"]:
-        # cut data to fit batch
-        x = [word_to_indices(sen) for sen in train_data["user_data"][i]["x"]]
+
+    trainloaders = []
+    for u in train_data["users"]:
+        train_data["user_data"][u]['x']
+        x = [word_to_indices(sen) for sen in train_data["user_data"][u]['x']]
         x = x[:int(len(x)/batch_size)*batch_size]
 
-        y = [word_to_indices(sen)[0] for sen in train_data["user_data"][i]["y"]]
+        y = [word_to_indices(sen)[0] for sen in train_data["user_data"][u]['y']]
         y = y[:int(len(y) / batch_size) * batch_size]
-        train_data_all_x += x
-        train_data_all_y += y
-        train_idx.append(len(x))
 
-    train_dataset = SHDataset(train_data_all_x, train_data_all_y)
+        trainloaders.append(SHDataset(x, y))
 
-    train_idx = len_to_index(train_idx)
-    trainloaders = [torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        sampler=SubsetSampler(train_idx[i]))
-        for i in range(len(train_idx))]
 
-    trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    # for i in train_data["users"]:
+    #     # cut data to fit batch
+    #     x = [word_to_indices(sen) for sen in train_data["user_data"][i]["x"]]
+    #     x = x[:int(len(x)/batch_size)*batch_size]
+    #
+    #     y = [word_to_indices(sen)[0] for sen in train_data["user_data"][i]["y"]]
+    #     y = y[:int(len(y) / batch_size) * batch_size]
+    #     train_data_all_x += x
+    #     train_data_all_y += y
+    #     train_idx.append(len(x))
+
+    # train_dataset = SHDataset(train_data_all_x, train_data_all_y)
+    #
+    # train_idx = len_to_index(train_idx)
+    # trainloaders = [torch.utils.data.DataLoader(
+    #     train_dataset,
+    #     batch_size=batch_size,
+    #     sampler=SubsetSampler(train_idx[i]))
+    #     for i in range(len(train_idx))]
+
+    # trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     #############################################################################
     test_data_all_x = []
     test_data_all_y = []
@@ -283,35 +296,37 @@ def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
 
     test_dataset = SHDataset(test_data_all_x, test_data_all_y)
 
-    test_idx = len_to_index(test_idx)
-    testloaders = [torch.utils.data.DataLoader(
-        test_dataset,
-        batch_size=batch_size,
-        sampler=SubsetSampler(test_idx[i]))
-        for i in range(len(test_idx))]
+    # test_idx = len_to_index(test_idx)
+    # testloaders = [torch.utils.data.DataLoader(
+    #     test_dataset,
+    #     batch_size=batch_size,
+    #     sampler=SubsetSampler(test_idx[i]))
+    #     for i in range(len(test_idx))]
 
     testloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
-    # iid dataloaders
-    idx = list(range(len(train_data_all_x)))
-    random.shuffle(idx)
-    new_train_data_all_x = [train_data_all_x[i] for i in idx]
-    new_train_data_all_y = [train_data_all_y[i] for i in idx]
-    train_dataset_iid = SHDataset(new_train_data_all_x, new_train_data_all_y)
-    trainloaders_iid = [torch.utils.data.DataLoader(
-        train_dataset_iid,
-        batch_size=batch_size,
-        sampler=SubsetSampler(train_idx[i]))
-        for i in range(len(train_idx))]
+    # # iid dataloaders
+    # idx = list(range(len(train_data_all_x)))
+    # random.shuffle(idx)
+    # new_train_data_all_x = [train_data_all_x[i] for i in idx]
+    # new_train_data_all_y = [train_data_all_y[i] for i in idx]
+    # train_dataset_iid = SHDataset(new_train_data_all_x, new_train_data_all_y)
+    # trainloaders_iid = [torch.utils.data.DataLoader(
+    #     train_dataset_iid,
+    #     batch_size=batch_size,
+    #     sampler=SubsetSampler(train_idx[i]))
+    #     for i in range(len(train_idx))]
 
     # test: single loader
     # train: single loader
     # train_s: loaders
     # test_s: loaders
     # train_s_iid: loaders with iid data
-    return {"test": testloader, "train_s": trainloaders,
-            "test_s": testloaders, "train": trainloader,
-            "train_s_iid": trainloaders_iid}
+    # return {"test": testloader, "train_s": trainloaders,
+    #         "test_s": testloaders, "train": trainloader,
+    #         "train_s_iid": trainloaders_iid}
+
+    return {"test": testloader, "train_s": trainloaders}
 
 
 def word_to_indices(word):
