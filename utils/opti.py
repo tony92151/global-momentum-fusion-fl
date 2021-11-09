@@ -56,7 +56,10 @@ def FEDOPTS(config: Configer = None, params=None, lr=None, **kwargs):
         raise ValueError("model not define in {}".format(FEDOPT.keys()))
     args = config.trainer.get_optimizer_args()
     args.update(kwargs)
+    #print(args)
     opt = FEDOPT[config.trainer.get_optimizer()](params=params, lr=lr, **args)
+    #opt = FEDOPT["DGCSGD"](params=params, lr=lr, **args)
+    #print("done")
     # try:
     #     opt = FEDOPT[config.trainer.get_optimizer()](params=params, lr=lr, **args)
     # except TypeError:

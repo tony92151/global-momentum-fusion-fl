@@ -6,7 +6,7 @@ from sparse_optimizer.base_optimizer import BASE_SGD, Memory
 class DGCSGD(BASE_SGD):
     def __init__(self, params, lr=None, dgc_momentum=0.9, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False, compress_ratio=0.5,
-                 device=torch.device("cpu")):
+                 device=torch.device("cpu"), **kwargs):
 
         super(DGCSGD, self).__init__(params=params, 
                                      lr=lr, 

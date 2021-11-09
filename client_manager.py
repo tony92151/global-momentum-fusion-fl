@@ -48,9 +48,10 @@ class client_manager:
         # Init trainers
         print("\nInit trainers...")
         print("Nodes: {}".format(config.general.get_nodes()))
-
+        print(">>>{}<<<".format(config.trainer.get_model()))
         if "lstm" in config.trainer.get_model():
             trainer_ = lstm_trainer
+            print("latm")
         else:
             trainer_ = trainer
         for i in tqdm(range(config.general.get_nodes())):
