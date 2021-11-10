@@ -60,22 +60,48 @@ echo "tbpath : $tbpath"
 ############################################################################################################
 
 
-# compress ratio 0.1
+# # compress ratio 0.1
+# $pyenv train_1.py \
+# --config ./configs/shakespeare/$compress_method/config_1.ini \
+# --tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.1 \
+# --output ./"$tbpath"/sha_1l_"$compress_method"_cr0.1 \
+# --pool 8 \
+# --seed 123 \
+# --gpu $gpu
+
+# compress ratio 0.3
 $pyenv train_1.py \
---config ./configs/shakespeare/$compress_method/config_1.ini \
---tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.1 \
---output ./"$tbpath"/sha_1l_"$compress_method"_cr0.1 \
---pool 5 \
+--config ./configs/shakespeare/$compress_method/config_3.ini \
+--tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.3 \
+--output ./"$tbpath"/sha_1l_"$compress_method"_cr0.3 \
+--pool 8 \
 --seed 123 \
 --gpu $gpu
 
+# # compress ratio 0.5
+# $pyenv train_1.py \
+# --config ./configs/shakespeare/$compress_method/config_5.ini \
+# --tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.5 \
+# --output ./"$tbpath"/sha_1l_"$compress_method"_cr0.5 \
+# --pool 8 \
+# --seed 123 \
+# --gpu $gpu
 
-# compress ratio 0.5
+# compress ratio 0.7
 $pyenv train_1.py \
---config ./configs/shakespeare/$compress_method/config_5.ini \
---tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.5 \
---output ./"$tbpath"/sha_1l_"$compress_method"_cr0.5 \
---pool 5 \
+--config ./configs/shakespeare/$compress_method/config_7.ini \
+--tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.7 \
+--output ./"$tbpath"/sha_1l_"$compress_method"_cr0.7 \
+--pool 8 \
+--seed 123 \
+--gpu $gpu
+
+# compress ratio 0.9
+$pyenv train_1.py \
+--config ./configs/shakespeare/$compress_method/config_9.ini \
+--tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.9 \
+--output ./"$tbpath"/sha_1l_"$compress_method"_cr0.9 \
+--pool 8 \
 --seed 123 \
 --gpu $gpu
 

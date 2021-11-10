@@ -36,7 +36,7 @@ class SGCSGD(BASE_SGD):
         if self.verbose:
             print(val)
 
-    def compress(self, compress=True):
+    def compress(self, compress=True, **kwargs):
         # r = self.compressor.compress(self.memory.get_mem(), mome=mome, compress=compress, fusing=fusing)
         # self.memory.set_compressed_mem(r)
         self.print_("optimizer >> compensate, {}".format(time.time()))

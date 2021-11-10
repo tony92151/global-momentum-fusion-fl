@@ -281,15 +281,25 @@ class lstm_trainer(trainer):
         optimizer.record_batchnorm(model=model)
         self.print_("trainer >> cid: {} >> compress, {}".format(self.cid, time.time()))
         ############################################################
-        if self.config.dgc.get_dgc():
-            if not self.config.gf.get_global_fusion() or \
-                    (round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
-                optimizer.compress(compress=True, momentum_correction=True)
+        if self.config.trainer.get_optimizer() == "SGCSGD":
+            optimizer.compress(compress=True)
+
+        elif self.config.trainer.get_optimizer() == "GFGCSGD":
+            if round_ < self.config.trainer.get_base_step() and self.config.gfgc.get_global_fusion_after_warmup():
+                optimizer.compress(compress=True)
             else:
-                optimizer.compress(global_momentum=self.global_momentum, compress=True,
-                                   momentum_correction=True)
+                optimizer.compress(global_momentum=self.global_momentum, compress=True)
         else:
-            optimizer.compress(compress=False, momentum_correction=False)
+            if self.config.dgc.get_dgc():
+                if not self.config.gf.get_global_fusion() or \
+                        (
+                                round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
+                    optimizer.compress(compress=True, momentum_correction=True)
+                else:
+                    optimizer.compress(global_momentum=self.global_momentum, compress=True,
+                                       momentum_correction=True)
+            else:
+                optimizer.compress(compress=False, momentum_correction=False)
         ############################################################
         eploss = sum(eploss) / len(eploss)
         if self.writer is not None:
