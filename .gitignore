@@ -137,3 +137,5 @@ dmypy.json
 # dataset & logs
 data/cifar10/
 tblogs/
+
+data/shakespeare/
