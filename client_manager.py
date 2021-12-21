@@ -1,23 +1,12 @@
-import argparse
-import copy
-import json
-import os
+import math
 import random
-import time
 from concurrent.futures import as_completed
-from bounded_pool_executor import BoundedThreadPoolExecutor as ThreadPoolExecutor
-
-import torch
-from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-
-from sparse_optimizer.warmup import warmup
-from utils.aggregator import aggregater, decompress, compress, parameter_count
 from utils.configer import Configer
-from utils.dataloaders import cifar_dataloaders, femnist_dataloaders, DATALOADER
-from utils.eval import evaluater, lstm_evaluater
+from utils.dataloaders import DATALOADER
 from utils.models import MODELS
-from utils.trainer import trainer, lstm_trainer
+from client.clients import get_client
+from server.servers import get_server
 
 
 class client_manager:
@@ -26,119 +15,114 @@ class client_manager:
                  warmup_scheduler=None,
                  writer=None,
                  executor=None):
-        if gpus is None:
-            gpus = []
-        self.trainers = []
+
         self.config = config
+        if gpus is None:
+            self.gpus = []
+        else:
+            self.gpus = gpus
+
+        self.warmup_scheduler = warmup_scheduler
+        self.writer = writer
         self.executor = executor
 
+
+        self.clients = []
+        self.server = get_server(config=self.config)
+
         print("\nInit dataloader...")
-        dataloaders, emb = DATALOADER(config=config, emd_measurement=True)
+        self.dataloaders, emb = DATALOADER(config=config, emd_measurement=True)
 
         # write earth_moving_distance
-        writer.add_scalar("earth_moving_distance", emb, global_step=0, walltime=None)
+        if writer is not None:
+            writer.add_scalar("earth_moving_distance", emb, global_step=0, walltime=None)
 
-        if "lstm" in config.trainer.get_model():
-            evaluater_ = lstm_evaluater
-        else:
-            evaluater_ = evaluater
-        self.evaluater = evaluater_(config=config,
-                                    dataloader=dataloaders["test"],
-                                    device=torch.device("cuda:{}".format(gpus[0])),
-                                    writer=None)
+        self.sampled_client_id = []
+        self.init_clients()
 
-        # Init trainers
+    def init_clients(self, trainer):
         print("\nInit trainers...")
-        print("Nodes: {}".format(config.general.get_nodes()))
-        if "lstm" in config.trainer.get_model():
-            trainer_ = lstm_trainer
-        else:
-            trainer_ = trainer
-        for i in tqdm(range(config.general.get_nodes())):
-            self.trainers.append(
-                trainer_(config=config,
-                         device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
-                         dataloader=dataloaders["train_s"][i],
-                         cid=i,
-                         writer=writer,
-                         warmup=warmup_scheduler)
+        print("Nodes: {}".format(self.config.general.get_nodes()))
+
+        client = get_client(self.config)
+        compressor = get_client(self.config)
+
+        for i in tqdm(range(self.config.general.get_nodes())):
+
+            self.clients.append(
+                client(cid=i,
+                       compressor=compressor,
+                       trainer=trainer,
+                       data={
+                                "train_dataloader": self.dataloaders['train_s'][i],
+                                "test_dataloader": self.dataloaders['test_s'][i] if self.dataloaders['test_s'] is not None else self.dataloaders['test'],
+                                "test_global_dataloader": self.dataloaders['test']
+                            }
+                       )
             )
-
-        self.sampled_trainer = []
-
-        self.cr = None  # compression ratio
-        self.fr = None  # fusion ratio
-        self.lr = None  # learning rate
 
     def set_init_mdoel(self):
         print("\nInit model...")
         net = MODELS(self.config)()
-        for tr in self.trainers:
-            tr.set_mdoel(net)
-
+        for client in self.clients:
+            client.set_model()
         return net
 
-    def set_sampled_trainer(self, cids):
-        self.sampled_trainer = cids
+    def sample_client(self):
+        number_of_client = math.ceil(self.config.general.get_nodes()*self.config.general.get_frac())
+        sample_result = random.sample(range(self.config.general.get_nodes()), number_of_client)
+        self.sampled_client_id = sorted(sample_result)
+        return self.sampled_client_id
 
     def sample_data(self):
-        for tr in self.trainers:
-            # if tr.cid in self.sampled_trainer:
-            #     tr.sample_data_from_dataloader()
-            tr.sample_data_from_dataloader()
-        self.evaluater.sample_data_from_dataloader()
+        for client in self.clients:
+            if client.cid in self.sampled_client_id:
+                client.sample_train_data()
 
-    # def set_parameter(self, round_):
-    #     self.lr = self.warmup.get_lr_from_step(round_)
-    #     # DGC
-    #     if self.config.trainer.get_optimizer() == "DGCSGD":
-    #         chunk = self.config.trainer.get_max_iteration() / len(self.config.dgc.get_compress_ratio())
-    #         chunk_ = self.config.trainer.get_max_iteration() / len(self.config.dgc.get_fusing_ratio())
-    #         self.cr = self.config.dgc.get_compress_ratio()[
-    #             min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
-    #         self.fr = self.config.gf.get_fusing_ratio()[min(len(self.config.gf.get_fusing_ratio()), int(round_ / chunk_))]
-    #     # SGC
-    #     elif self.config.trainer.get_optimizer("SGCSGD"):
-    #         chunk = self.config.trainer.get_max_iteration() / len(self.config.gc.get_compress_ratio())
-    #         chunk_ = self.config.trainer.get_max_iteration() / len(self.config.gc.get_fusing_ratio())
-    #         cr = self.config.dgc.get_compress_ratio()[min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
-    #         fr = self.config.gf.get_fusing_ratio()[min(len(self.config.gf.get_fusing_ratio()), int(round_ / chunk_))]
-    #     # GFDGC
-    #     elif self.config.trainer.get_optimizer("GFDGCSGD"):
-    #         pass
-    #     # GFGC
-    #     elif self.config.trainer.get_optimizer("GFCSGD"):
-    #         pass
+    def train(self, communication_round):
+        # update client infomation
+        for client in self.clients:
+            client.communication_round = communication_round
 
-    def training(self, epoch):
-        gs = []
+        trained_gradients = []
         if self.executor is not None:
             futures = []
-            for tr in self.trainers:
-                if tr.cid in self.sampled_trainer:
-                    futures.append(self.executor.submit(tr.train_run, epoch))
+            for client in self.clients:
+                if client.cid in self.sampled_client_id:
+                    futures.append(self.executor.submit(client.train))
                 else:
-                    futures.append(self.executor.submit(tr.eval_run, epoch))
+                    futures.append(self.executor.submit(client.test))
 
             for _ in as_completed(futures):
                 pass
             del futures
 
-            for tr in self.trainers:
-                if tr.cid in self.sampled_trainer:
-                    gs.append(tr.last_gradient)
+            for client in self.clients:
+                if client.cid in self.sampled_trainer:
+                    trained_gradients.append(client.get_gradient())
         else:
-            for i, tr in enumerate(self.trainers):
-                if tr.cid in self.sampled_trainer:
-                    _ = tr.train_run(round_=epoch)
+            for client in self.clients:
+                if client.cid in self.sampled_client_id:
+                    client.train()
                 else:
-                    _ = tr.eval_run(round_=epoch)
-            for tr in self.trainers:
-                if tr.cid in self.sampled_trainer:
-                    gs.append(tr.last_gradient)
+                    client.test()
 
-        return gs
+            for client in self.clients:
+                if client.cid in self.sampled_client_id:
+                    client.append(client.get_gradient())
 
-    def opt_one_step(self, epoch, aggregated_gradient):
-        for tr in self.trainers:
-            _ = tr.opt_step_base_model(round_=epoch, base_gradient=aggregated_gradient)
+        return trained_gradients
+
+    def global_test(self):
+        # self.clients[0].test(da)
+        # return test_acc, test_loss
+        pass
+
+    def one_step_update(self, aggregated_gradient):
+        for client in self.clients:
+            client.one_step_update(aggregated_gradient=aggregated_gradient)
+
+    def aggregate(self, trained_gradients):
+        aggregated_gradient = self.server.aggregate(trained_gradients=trained_gradients)
+        return aggregated_gradient
+

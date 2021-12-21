@@ -10,14 +10,11 @@ from bounded_pool_executor import BoundedThreadPoolExecutor as ThreadPoolExecuto
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-
 from sparse_optimizer.warmup import warmup
-from utils.aggregator import aggregater, decompress, compress, parameter_count
 from utils.configer import Configer
-from utils.dataloaders import cifar_dataloaders, femnist_dataloaders, DATALOADER
-from utils.eval import evaluater, lstm_evaluater
-from utils.models import MODELS
-from utils.trainer import trainer, lstm_trainer
+from client_manager import client_manager
+
+from utils.parameter_counter import parameter_count
 
 
 def set_seed(seed):
@@ -27,7 +24,7 @@ def set_seed(seed):
 
 def init_writer(tbpath, name_prefix=""):
     # tbpath = "/root/notebooks/tensorflow/logs/test"
-    tbpath = os.path.join(os.path.dirname(tbpath), name_prefix+tbpath.split("/")[-1])
+    tbpath = os.path.join(os.path.dirname(tbpath), name_prefix + tbpath.split("/")[-1])
     os.makedirs(tbpath, exist_ok=True)
     writer = SummaryWriter(tbpath)
     print("$ tensorboard --logdir={} --port 8123 --host 0.0.0.0 \n".format(os.path.dirname(tbpath)))
@@ -54,11 +51,14 @@ if __name__ == '__main__':
     parser.add_argument('--pool', help="Multiprocess Worker Pools", type=str, default="-1")
     parser.add_argument('--gpu', help="GPU usage. ex: 0,1,2", type=str, default="0")
     parser.add_argument('--name_prefix', help="name_prefix", type=str, default="")
+    parser.add_argument('--seed', help="seed", type=int, default=123)
+
+    parser.add_argument('--tensorboard_path', type=str, default=None)
     args = parser.parse_args()
 
     if args.config is None or args.output is None:
         print("Please set --config & --output.")
-        exit()
+        exit(1)
 
     con_path = os.path.abspath(args.config)
     out_path = os.path.abspath(args.output)
@@ -70,187 +70,84 @@ if __name__ == '__main__':
     else:
         print("\nGPU usage: {}".format(gpus))
 
-    print("Read cinfig at : {}".format(con_path))
+    print("Read config at : {}".format(con_path))
     config = Configer(con_path)
 
     num_pool = args.pool
     if num_pool == "auto":
-        num_pool = int(config.general.get_nodes() / 2) + 5
+        num_pool = int(config.general.get_nodes() / 2)
         print("\nPool: {}".format(num_pool))
     else:
         num_pool = int(num_pool)
         print("\nPool: {}".format(num_pool))
 
-    tb_path = os.path.join(config.general.get_tbpath(),
-                           str(int(time.time()))) if config.general.get_tbpath() == "./tblogs" \
-        else config.general.get_tbpath()
+    logdir = args.tensorboard_path if args.tensorboard_path is not None else config.general.logdir()
 
-    writer = init_writer(tbpath=os.path.abspath(tb_path), name_prefix = args.name_prefix)
+    writer = init_writer(tbpath=os.path.abspath(logdir), name_prefix=args.name_prefix)
 
-    w = warmup(start_lr=config.trainer.get_start_lr(),
-               max_lr=config.trainer.get_max_lr(),
-               min_lr=config.trainer.get_min_lr(),
-               base_step=config.trainer.get_base_step(),
-               end_step=config.trainer.get_end_step())
+    warmup_scheduler = warmup(start_lr=config.trainer.get_start_lr(),
+                              max_lr=config.trainer.get_max_lr(),
+                              min_lr=config.trainer.get_min_lr(),
+                              base_step=config.trainer.get_base_step(),
+                              end_step=config.trainer.get_end_step())
 
-    print("\nInit dataloader...")
-    dataloaders, emb = DATALOADER(config=config, emd_measurement=True)
+    if not num_pool == -1:
+        executor = ThreadPoolExecutor(max_workers=num_pool)
+    else:
+        executor = None
 
-    # write earth_moving_distance
-    writer.add_scalar("earth_moving_distance", emb, global_step=0, walltime=None)
+    client_manager = client_manager(config=config,
+                                    gpus=gpus,
+                                    warmup_scheduler=warmup_scheduler,
+                                    writer=writer,
+                                    executor=executor)
 
-    # Init trainers
-    print("\nInit trainers...")
-    print("Nodes: {}".format(config.general.get_nodes()))
-    trainers = []
-    if "lstm" in config.trainer.get_model():
-        trainer = lstm_trainer
-    for i in tqdm(range(config.general.get_nodes())):
-        trainers.append(trainer(config=config,
-                                device=torch.device("cuda:{}".format(gpus[i % len(gpus)])),
-                                dataloader=dataloaders["train_s"][i],
-                                dataloader_iid=dataloaders["train_s_iid"][i],
-                                cid=i,
-                                writer=writer,
-                                warmup=w))
-
-    print("\nInit model...")
-    set_seed(123)
-    net = MODELS(config)()
-
-    for tr in trainers:
-        tr.set_mdoel(net)
-
-    # Init trainers evaluator
-    if "lstm" in config.trainer.get_model():
-        evaluater = lstm_evaluater
-    ev = evaluater(config=config, dataloader=dataloaders["test"], device=torch.device("cuda:{}".format(gpus[0])),
-                   writer=None)
+    set_seed(args.seed + 1)
+    net = client_manager.set_init_mdoel()
 
     # init traffic simulator (count number of parameters of transmitted gradient)
     traffic = 0
     traffic += (parameter_count(net) * config.general.get_nodes())  # clients download
+    full_size = parameter_count(net)
 
     client_smapled_count = [0 for i in range(config.general.get_nodes())]
 
-    # weight divergence record
-    weight_divergence_each_round = []
     # train
     print("\nStart training...")
-    if not num_pool == -1:
-        executor = ThreadPoolExecutor(max_workers=num_pool)
-    for epoch in tqdm(range(config.trainer.get_max_iteration())):
-        gs = []
+    for communication_round in tqdm(range(config.trainer.get_max_iteration())):
+        set_seed(args.seed + communication_round)
         # sample trainer
-        set_seed(epoch + 1)
-        sample_trainer_cid = random.sample(range(config.general.get_nodes()),
-                                           round(config.general.get_nodes() * config.trainer.get_frac()))
-        sample_trainer_cid = sorted(sample_trainer_cid)
+        sampled_client_id = client_manager.sample_client()
+
         # sample dataset
-        set_seed(epoch)
-        for tr in trainers:
-            if tr.cid in sample_trainer_cid:
-                tr.sample_data_from_dataloader()
-        ev.sample_data_from_dataloader()
-
-        add_info(epoch, config, w)
-        ####################################################################################################
-        ####################################################################################################
-        if not num_pool == -1:
-            # training
-            futures = []
-            for tr in trainers:
-                if tr.cid in sample_trainer_cid:
-                    futures.append(executor.submit(tr.train_run, epoch))
-                else:
-                    futures.append(executor.submit(tr.eval_run, epoch))
-
-            for future in as_completed(futures):
-                pass
-            del futures
-
-            for tr in trainers:
-                if tr.cid in sample_trainer_cid:
-                    gs.append(tr.last_gradient)
-
-            traffic += parameter_count(gs)  # clients transmit to aggregator(server)
-
-            for i in range(len(gs)):
-                gs[i]["gradient"] = decompress(gs[i]["gradient"])
-
-            # aggregate
-            aggregated_gradient = aggregater(gs, aggrete_bn=False)
-
-            # calculate the weight_divergence (one-step update will overwrite the base_model, so do it first)
-            weight_divergence_list = []
-            for tr in trainers:
-                if tr.cid in sample_trainer_cid:
-                    result = tr.weight_divergence_test(round_=epoch,
-                                                       aggregated_gradient=aggregated_gradient)
-                    weight_divergence_list.append(result)
-            weight_divergence_avg = sum(weight_divergence_list) / len(weight_divergence_list)
-
-            # one-step update
-            futures_ = []
-            for tr in trainers:
-                tr.round = epoch
-                futures_.append(executor.submit(tr.opt_step_base_model, aggregated_gradient))
-            for future in as_completed(futures_):
-                pass
-            del futures_
+        client_manager.sample_data()
 
         ####################################################################################################
-        else:
-            for i, tr in zip(range(len(trainers)), trainers):
-                _ = tr.train_run(round_=epoch)
-                gs.append(tr.last_gradient)
+        trained_gradients = client_manager.train(communication_round=communication_round)
 
-            traffic += parameter_count(gs)  # clients upload and aggregator download
+        # clients transmit to aggregator(server)
+        traffic += sum([parameter_count(g) for g in trained_gradients])
 
-            for i in range(len(gs)):
-                gs[i]["gradient"] = decompress(gs[i]["gradient"])
+        # aggregate
+        aggregated_gradient = client_manager.aggregate(trained_gradients=trained_gradients)
 
-            aggregated_gradient = aggregater(gs, device=torch.device("cuda:0"), aggrete_bn=False)
+        # server transmit to clients
+        traffic += parameter_count(aggregated_gradient)*config.general.get_nodes()
 
-            # calculate the weight_divergence (one-step update will overwrite the base_model, so do it first)
-            weight_divergence_list = []
-            for tr in trainers:
-                if tr.cid in sample_trainer_cid:
-                    result = tr.weight_divergence_test(epoch, aggregated_gradient=aggregated_gradient)
-                    weight_divergence_list.append(result)
-            weight_divergence_avg = sum(weight_divergence_list) / len(weight_divergence_list)
-
-            for tr in trainers:
-                tm = tr.opt_step_base_model(round_=epoch, base_gradient=aggregated_gradient)
-
+        # one step update
+        client_manager.one_step_update(aggregated_gradient=aggregated_gradient)
         ####################################################################################################
-        ####################################################################################################
-        # for tr in trainers:
-        #     if tr.cid in sample_trainer_cid:
-        #         tr.weight_divergence_test(epoch,
-        #                                   aggregated_gradient=aggregated_gradient,
-        #                                   trainer_gradient=None,
-        #                                   base_model=None)
 
-        # clients download
-        traffic += (parameter_count(
-            [{"gradient": compress(aggregated_gradient["gradient"])}]) * config.general.get_nodes())
+        test_acc, test_loss = client_manager.global_test()
+        writer.add_scalar("test loss", test_loss, global_step=communication_round, walltime=None)
+        writer.add_scalar("test acc", test_acc, global_step=communication_round, walltime=None)
+        writer.add_scalar("traffic(number_of_parameters)", traffic, global_step=communication_round, walltime=None)
 
-        test_acc, test_loss = ev.eval_run(model=trainers[0].last_model)
-        writer.add_scalar("test loss", test_loss, global_step=epoch, walltime=None)
-        writer.add_scalar("test acc", test_acc, global_step=epoch, walltime=None)
-        writer.add_scalar("traffic(number_of_parameters)", traffic, global_step=epoch, walltime=None)
-
-        writer.add_scalar("weight_divergence_avg", weight_divergence_avg, global_step=epoch, walltime=None)
-        weight_divergence_each_round.append(weight_divergence_avg)
-
-        for cid in sample_trainer_cid:
+        for cid in sampled_client_id:
             client_smapled_count[cid] += 1
 
-    weight_divergence_all_rounds_avg = sum(weight_divergence_each_round)/len(weight_divergence_each_round)
-    writer.add_scalar("weight_divergence_all_rounds_avg", weight_divergence_all_rounds_avg, global_step=0, walltime=None)
-
     print(client_smapled_count)
+
     if not num_pool == -1:
         executor.shutdown(True)
 
@@ -265,7 +162,7 @@ if __name__ == '__main__':
     context = json.load(file_)
     file_.close()
 
-    name = tb_path.split("/")[-1]
+    name = logdir.split("/")[-1]
     if name not in context.keys():
         context[name] = [{"test_acc": test_acc, "test loss": test_loss, "client_smapled_count": client_smapled_count}]
     else:
@@ -276,5 +173,5 @@ if __name__ == '__main__':
     json.dump(context, f, indent=4)
     f.close()
 
-    time.sleep(20)
+    time.sleep(5)
     print("Done")
