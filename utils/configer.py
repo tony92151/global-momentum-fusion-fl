@@ -12,8 +12,8 @@ class config_general:
     def __init__(self, config):
         self.config = dict(config._sections["general"])
 
-    def get_tbpath(self) -> str:
-        return self.config["tbpath"]
+    def get_logdir(self) -> str:
+        return self.config["logdir"]
 
     def get_nodes(self) -> int:
         return int(self.config["nodes"])
