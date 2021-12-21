@@ -18,6 +18,9 @@ class config_general:
     def get_nodes(self) -> int:
         return int(self.config["nodes"])
 
+    def get_frac(self) -> float:
+        return float(self.config["frac"])
+
 
 class config_trainer:
     def __init__(self, config):
@@ -40,9 +43,6 @@ class config_trainer:
 
     def get_local_ep(self) -> int:
         return int(self.config["local_ep"])
-
-    def get_frac(self) -> float:
-        return float(self.config["frac"])
 
     def get_lr(self) -> float:
         return float(self.config["lr"])
