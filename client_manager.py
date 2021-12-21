@@ -22,10 +22,12 @@ from utils.trainer import trainer, lstm_trainer
 
 class client_manager:
     def __init__(self, config: Configer,
-                 gpus=0,
+                 gpus=None,
                  warmup_scheduler=None,
                  writer=None,
                  executor=None):
+        if gpus is None:
+            gpus = []
         self.trainers = []
         self.config = config
         self.executor = executor
@@ -48,10 +50,8 @@ class client_manager:
         # Init trainers
         print("\nInit trainers...")
         print("Nodes: {}".format(config.general.get_nodes()))
-        print(">>>{}<<<".format(config.trainer.get_model()))
         if "lstm" in config.trainer.get_model():
             trainer_ = lstm_trainer
-            print("latm")
         else:
             trainer_ = trainer
         for i in tqdm(range(config.general.get_nodes())):
@@ -65,6 +65,10 @@ class client_manager:
             )
 
         self.sampled_trainer = []
+
+        self.cr = None  # compression ratio
+        self.fr = None  # fusion ratio
+        self.lr = None  # learning rate
 
     def set_init_mdoel(self):
         print("\nInit model...")
@@ -83,6 +87,28 @@ class client_manager:
             #     tr.sample_data_from_dataloader()
             tr.sample_data_from_dataloader()
         self.evaluater.sample_data_from_dataloader()
+
+    # def set_parameter(self, round_):
+    #     self.lr = self.warmup.get_lr_from_step(round_)
+    #     # DGC
+    #     if self.config.trainer.get_optimizer() == "DGCSGD":
+    #         chunk = self.config.trainer.get_max_iteration() / len(self.config.dgc.get_compress_ratio())
+    #         chunk_ = self.config.trainer.get_max_iteration() / len(self.config.dgc.get_fusing_ratio())
+    #         self.cr = self.config.dgc.get_compress_ratio()[
+    #             min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
+    #         self.fr = self.config.gf.get_fusing_ratio()[min(len(self.config.gf.get_fusing_ratio()), int(round_ / chunk_))]
+    #     # SGC
+    #     elif self.config.trainer.get_optimizer("SGCSGD"):
+    #         chunk = self.config.trainer.get_max_iteration() / len(self.config.gc.get_compress_ratio())
+    #         chunk_ = self.config.trainer.get_max_iteration() / len(self.config.gc.get_fusing_ratio())
+    #         cr = self.config.dgc.get_compress_ratio()[min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
+    #         fr = self.config.gf.get_fusing_ratio()[min(len(self.config.gf.get_fusing_ratio()), int(round_ / chunk_))]
+    #     # GFDGC
+    #     elif self.config.trainer.get_optimizer("GFDGCSGD"):
+    #         pass
+    #     # GFGC
+    #     elif self.config.trainer.get_optimizer("GFCSGD"):
+    #         pass
 
     def training(self, epoch):
         gs = []

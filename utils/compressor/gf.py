@@ -11,6 +11,15 @@ class config_gf:
             fr = [float(fr)]
         return fr
 
+    def get_compress_ratio(self) -> list:
+        fr = self.config["fusing_ratio"]
+        if fr[0] == "[" and fr[-1] == "]":
+            fr = fr[1:-1].split(",")
+            fr = [float(i) for i in fr]
+        else:
+            fr = [float(fr)]
+        return fr
+
     def get_global_fusion(self) -> bool:
         if self.config["global_fusion"] == "False":
             return False

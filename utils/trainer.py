@@ -34,6 +34,10 @@ class trainer:
         self.sampled_data = None
         ####
 
+        # self.cr = None  # compression ratio
+        # self.fr = None  # fusion ratio
+        # self.lr = None  # learning rate
+
         # self.weight_divergence = None
         self.weight_divergence = []
         if self.config.trainer.get_lossfun() == "crossentropy":
@@ -57,6 +61,11 @@ class trainer:
         self.sampled_data = []
         for data, target in self.dataloader:
             self.sampled_data.append((data, target))
+
+    # def set_lr_cr_fr(self, lr=None, cr=None, fr=None):
+    #     self.lr = lr
+    #     self.cr = cr
+    #     self.fr = fr
 
     def train_run(self, round_, base_model=None):
         if base_model is None:
@@ -251,6 +260,11 @@ class lstm_trainer(trainer):
         chunk_ = self.config.trainer.get_max_iteration() / len(self.config.gf.get_fusing_ratio())
         cr = self.config.dgc.get_compress_ratio()[min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
         fr = self.config.gf.get_fusing_ratio()[min(len(self.config.gf.get_fusing_ratio()), int(round_ / chunk_))]
+        if self.cid == 0 and self.writer is not None:
+            self.writer.add_scalar("Compress ratio", cr, global_step=round_, walltime=None)
+            if self.config.gf.get_global_fusion():
+                self.writer.add_scalar("Fusion ratio", fr, global_step=round_, walltime=None)
+            self.writer.add_scalar("Learning rate", lr, global_step=round_, walltime=None)
 
         optimizer = FEDOPTS(config=self.config, params=model.parameters(), lr=lr,
                             dgc_momentum=self.config.dgc.get_momentum(),

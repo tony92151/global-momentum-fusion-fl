@@ -326,6 +326,10 @@ def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     # return {"test": testloader, "train_s": trainloaders,
     #         "test_s": testloaders, "train": trainloader,
     #         "train_s_iid": trainloaders_iid}
+    train_total = sum([len(d.dataset) for d in trainloaders])
+    test_total = len(testloader.dataset)
+    print("Train total:", train_total)
+    print("Test total:", test_total)
 
     return {"test": testloader, "train_s": trainloaders}
 
@@ -381,3 +385,9 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
     #print("\nTotal train data: {}".format(len(dataloaders["train"].dataset)))
     print("Total test data: {}".format(len(dataloaders["test"].dataset)))
     return dataloaders, emd
+
+
+# dataloader statistics
+def data_statistics():
+    pass
+

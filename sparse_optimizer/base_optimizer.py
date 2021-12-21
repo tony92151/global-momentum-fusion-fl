@@ -4,6 +4,7 @@ from sparse_optimizer.topk_compressor import topkCompressor
 from collections import defaultdict
 from torch.optim.lr_scheduler import StepLR
 
+
 # copy from torch/optim/sgd.py
 class BASE_SGD(torch.optim.Optimizer):
     def __init__(self, params, lr=None, momentum=0, dampening=0,
@@ -19,7 +20,7 @@ class BASE_SGD(torch.optim.Optimizer):
         # self.compressor = topkCompressor(compress_ratio=compress_ratio, device=device)
         self.device = device
         self.step_count = 0
-        
+
         defaults = dict(lr=lr, momentum=momentum, dampening=dampening,
                         weight_decay=weight_decay, nesterov=nesterov)
         if nesterov and (momentum <= 0 or dampening != 0):
@@ -62,7 +63,7 @@ class BASE_SGD(torch.optim.Optimizer):
     def compress(self):
         raise NotImplementedError("Do some thing in compress.")
 
-    def decompress(self, compressed_gradient:list=None):
+    def decompress(self, compressed_gradient: list = None):
         if compressed_gradient is None:
             raise ValueError(compressed_gradient)
         return topkCompressor().decompress(mem=compressed_gradient)
@@ -70,7 +71,7 @@ class BASE_SGD(torch.optim.Optimizer):
     def get_compressed_gradient(self):
         return self.memory.compressed_mem
 
-    def set_gradient(self, gradient:list):
+    def set_gradient(self, gradient: list):
         aggregated_gradradient = copy.deepcopy(gradient)
         for group in self.param_groups:
             for p in range(len(group['params'])):
@@ -131,7 +132,7 @@ class BASE_SGD(torch.optim.Optimizer):
                 p.add_(d_p, alpha=-group['lr'])
 
         # self.step_count += 1
-        self.memory.mem["step_count"]+=1
+        self.memory.mem["step_count"] += 1
         # self.memory.clean()
         return loss
 
