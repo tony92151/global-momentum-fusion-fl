@@ -2,14 +2,8 @@ class config_dgc:
     def __init__(self, config):
         self.config = dict(config._sections["dgc"])
 
-    def get_dgc(self) -> bool:
-        if self.config["dgc"] == "False":
-            return False
-        elif self.config["dgc"] == "True":
-            return True
-
-    def get_compress_ratio(self) -> list:
-        cr = self.config["compress_ratio"]
+    def get_compress_rate(self) -> list:
+        cr = self.config["compress_rate"]
         if cr[0] == "[" and cr[-1] == "]":
             cr = cr[1:-1].split(",")
             cr = [float(i) for i in cr]

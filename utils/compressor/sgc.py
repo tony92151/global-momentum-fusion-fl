@@ -8,5 +8,5 @@ class config_sgc:
     def get_approximation_momentum(self) -> float:
         return float(self.config["approximation_momentum"])
 
-    def get_global_momentum(self) -> float:
-        return float(self.config["global_momentum"])
+    def get_server_momentum(self) -> float:
+        return float(self.config["server_momentum"])

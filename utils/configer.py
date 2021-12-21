@@ -4,6 +4,8 @@ from utils.compressor.gf import config_gf
 from utils.compressor.gfgc import config_gfgc
 from utils.compressor.sgc import config_sgc
 
+algo_we_provide = ["dgc", "sgc", "gfdgc", "gfgc"]
+
 
 class config_general:
     def __init__(self, config):
@@ -22,7 +24,7 @@ class config_trainer:
 
     def get_device(self):
         return self.config["device"]
-    
+
     def get_model(self) -> str:
         return self.config["model"]
 
@@ -109,6 +111,17 @@ class config_agg:
         return args
 
 
+class config_compression:
+    def __init__(self, config):
+        self.config = dict(config._sections["compression"])
+
+    def get_algorithm(self) -> str:
+        algo = str(self.config["algorithm"])
+        if not algo in algo_we_provide:
+            raise ValueError("config: compression -> algorithm, got error config.")
+        return algo
+
+
 class Configer:
     def __init__(self, configfile):
         self.config = configparser.ConfigParser()
@@ -119,23 +132,25 @@ class Configer:
         self.eval = config_eval(self.config)
         self.agg = config_agg(self.config)
 
-        try:
-            self.dgc = config_dgc(self.config)
-        except KeyError:
-            print("config read: skip dgc")
+        self.compression = config_compression(self.config)
 
-        try:
-            self.gf = config_gf(self.config)
-        except KeyError:
-            print("config read: skip gf")
-
-        try:
-            self.gfgc = config_gfgc(self.config)
-        except KeyError:
-            print("config read: skip gfgc")
-
-        try:
-            self.sgc = config_sgc(self.config)
-        except KeyError:
-            print("config read: skip sgc")
-
+        if self.compression.get_algorithm() == "dgc":
+            try:
+                self.dgc = config_dgc(self.config)
+            except KeyError:
+                print("config read: skip dgc")
+        elif self.compression.get_algorithm() == "sgc":
+            try:
+                self.gf = config_gf(self.config)
+            except KeyError:
+                print("config read: skip gf")
+        elif self.compression.get_algorithm() == "gfdgc":
+            try:
+                self.gfgc = config_gfgc(self.config)
+            except KeyError:
+                print("config read: skip gfgc")
+        elif self.compression.get_algorithm() == "gfgc":
+            try:
+                self.sgc = config_sgc(self.config)
+            except KeyError:
+                print("config read: skip sgc")
