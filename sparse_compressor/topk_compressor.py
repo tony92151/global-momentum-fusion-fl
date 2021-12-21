@@ -1,18 +1,25 @@
 import torch
-import copy
+from copy import deepcopy as dcopy
 import math
 
+
 class topkCompressor:
-    def __init__(self, compress_ratio:float=0.5, device=torch.device("cpu")):
-        self.compress_ratio = compress_ratio
+    def __init__(self, compress_rate: float = 0.5, device=torch.device("cpu")):
+        self.compress_rate = compress_rate
         self.device = device
 
-    def compress(self, mem:list, compress:bool=True):
-        tensor_memory = copy.deepcopy(mem)
-        compressed_grad = []
+    def compress(self, gradient_dict: dict, compress: bool = True):
+        if gradient_dict['compressed']:
+            return gradient_dict
 
-        for t in range(len(tensor_memory)):
-            tensor = tensor_memory[t].to(self.device)
+        gradient_tmp = dcopy(gradient_dict['gradient'])
+
+        new_gradient = dcopy(gradient_dict)
+        for k in new_gradient['gradient'].keys():
+            new_gradient['gradient'][k] = None
+
+        for k in gradient_tmp.keys():
+            tensor = gradient_tmp[k].to(self.device)
 
             shape = list(tensor.size())
             tensor = tensor.flatten()
@@ -22,7 +29,7 @@ class topkCompressor:
             tensor_calculate = tensor_calculate.abs()
             tensor_calculate_filtered = tensor_calculate[tensor_calculate > 0]
 
-            if len(tensor_calculate) == 0 or self.compress_ratio == 1.0:
+            if len(tensor_calculate) == 0 or self.compress_rate == 1.0:
                 compress = False
 
             if compress:
@@ -39,13 +46,22 @@ class topkCompressor:
 
             tensor_compressed = values.cpu().tolist()
             ctx = shape, mask.cpu().tolist(), numel
-            compressed_grad.append((tensor_compressed, ctx))
-        return compressed_grad
+            new_gradient['gradient'][k] = (tensor_compressed, ctx)
+        new_gradient['compressed'] = True
+        return new_gradient
 
-    def decompress(self, mem:list):
-        tensor_memory = copy.deepcopy(mem)
-        decompressed_mem = []
-        for j in tensor_memory:
+    def decompress(self, gradient_dict: dict):
+        if not gradient_dict['compressed']:
+            return gradient_dict
+
+        gradient_tmp = dcopy(gradient_dict['gradient'])
+
+        new_gradient = dcopy(gradient_dict)
+        for k in new_gradient['gradient'].keys():
+            new_gradient['gradient'][k] = None
+
+        for k in gradient_tmp.keys():
+            j = gradient_tmp[k]
             new_mem, ctx = j
             shape, mask, numel = ctx
 
@@ -55,8 +71,9 @@ class topkCompressor:
 
             tensor_decompressed = torch.zeros(numel, dtype=values.dtype, layout=values.layout, device=values.device)
             tensor_decompressed.scatter_(0, indices, values)
-            decompressed_mem.append(tensor_decompressed.view(shape))
-        return decompressed_mem
+            new_gradient['gradient'][k] = tensor_decompressed.view(shape)
+        new_gradient['compressed'] = False
+        return new_gradient
 
 
 def find_threshold_buildin_function(tensor, cr):
@@ -70,6 +87,7 @@ def find_threshold_by_sort(tensor, cr):
     values, _ = torch.sort(tensor)
     values = torch.fliplr(values.unsqueeze(0)).squeeze(0)
     return values[idx]
+
 
 def find_threshold_by_approach(tensor, compress_ratio=1.0, max_iter=10, device=torch.device("cpu")):
     tmin = torch.min(tensor)
