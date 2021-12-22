@@ -8,6 +8,9 @@ class topkCompressor:
         self.compress_rate = compress_rate
         self.device = device
 
+    def set_compress_rate(self, compress_rate):
+        self.compress_rate = compress_rate
+
     def compress(self, gradient_dict: dict, compress: bool = True):
         if gradient_dict['compressed']:
             return gradient_dict
@@ -77,7 +80,8 @@ class topkCompressor:
 
 
 def find_threshold_buildin_function(tensor, compress_rate=1.0):
-    thr = torch.min(torch.topk(tensor.abs(), max(1, int(tensor.numel() * compress_rate)), largest=True, sorted=False)[0])
+    thr = torch.min(
+        torch.topk(tensor.abs(), max(1, int(tensor.numel() * compress_rate)), largest=True, sorted=False)[0])
     return thr
 
 
