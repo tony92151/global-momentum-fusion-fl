@@ -32,8 +32,8 @@ class config_trainer:
     def get_model(self) -> str:
         return self.config["model"]
 
-    def get_dataset_type(self):
-        return self.config["dataset_type"]
+    def get_dataset(self) -> str:
+        return self.config["dataset"]
 
     def get_dataset_path(self):
         return self.config["dataset_path"]
