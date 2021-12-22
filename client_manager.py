@@ -1,12 +1,16 @@
 import math
 import random
 from concurrent.futures import as_completed
+
+import torch
 from tqdm import tqdm
 from utils.configer import Configer
 from utils.dataloaders import DATALOADER
 from utils.models import MODELS
 from client.clients import get_client
 from server.servers import get_server
+from trainer.trainers import get_trainer
+from sparse_compressor.topk_compressor import topkCompressor
 
 
 class client_manager:
@@ -14,8 +18,10 @@ class client_manager:
                  gpus=None,
                  warmup_scheduler=None,
                  writer=None,
-                 executor=None):
+                 executor=None,
+                 available_gpu=None):
 
+        self.available_gpu = available_gpu
         self.config = config
         if gpus is None:
             self.gpus = []
@@ -25,7 +31,6 @@ class client_manager:
         self.warmup_scheduler = warmup_scheduler
         self.writer = writer
         self.executor = executor
-
 
         self.clients = []
         self.server = get_server(config=self.config)
@@ -40,24 +45,30 @@ class client_manager:
         self.sampled_client_id = []
         self.init_clients()
 
-    def init_clients(self, trainer):
+    def init_clients(self, trainer, compressor):
         print("\nInit trainers...")
         print("Nodes: {}".format(self.config.general.get_nodes()))
 
         client = get_client(self.config)
-        compressor = get_client(self.config)
+        trainer = get_trainer(self.config)
+        compressor = topkCompressor()
 
         for i in tqdm(range(self.config.general.get_nodes())):
-
             self.clients.append(
-                client(cid=i,
+                client(config=self.config,
+                       cid=i,
                        compressor=compressor,
                        trainer=trainer,
                        data={
-                                "train_dataloader": self.dataloaders['train_s'][i],
-                                "test_dataloader": self.dataloaders['test_s'][i] if self.dataloaders['test_s'] is not None else self.dataloaders['test'],
-                                "test_global_dataloader": self.dataloaders['test']
-                            }
+                           "train_dataloader": self.dataloaders['train_s'][i],
+                           "test_dataloader": self.dataloaders['test_s'][i] if self.dataloaders[
+                                                                                   'test_s'] is not None else
+                           self.dataloaders['test'],
+                           "test_global_dataloader": self.dataloaders['test']
+                       },
+                       writer=self.writer,
+                       device=torch.device("cuda:{}".format(
+                           i % self.available_gpu)) if self.available_gpu is not None else torch.device("cpu")
                        )
             )
 
@@ -65,11 +76,11 @@ class client_manager:
         print("\nInit model...")
         net = MODELS(self.config)()
         for client in self.clients:
-            client.set_model()
+            client.set_model(net)
         return net
 
     def sample_client(self):
-        number_of_client = math.ceil(self.config.general.get_nodes()*self.config.general.get_frac())
+        number_of_client = math.ceil(self.config.general.get_nodes() * self.config.general.get_frac())
         sample_result = random.sample(range(self.config.general.get_nodes()), number_of_client)
         self.sampled_client_id = sorted(sample_result)
         return self.sampled_client_id
@@ -79,11 +90,12 @@ class client_manager:
             if client.cid in self.sampled_client_id:
                 client.sample_train_data()
 
-    def train(self, communication_round):
-        # update client infomation
+    def set_communication_round(self, communication_round):
+        # update client information
         for client in self.clients:
-            client.communication_round = communication_round
+            client.set_communication_round(communication_round)
 
+    def train(self):
         trained_gradients = []
         if self.executor is not None:
             futures = []
@@ -125,4 +137,3 @@ class client_manager:
     def aggregate(self, trained_gradients):
         aggregated_gradient = self.server.aggregate(trained_gradients=trained_gradients)
         return aggregated_gradient
-

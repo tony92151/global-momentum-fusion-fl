@@ -10,7 +10,7 @@ from bounded_pool_executor import BoundedThreadPoolExecutor as ThreadPoolExecuto
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from sparse_optimizer.warmup import warmup
+from sparse_optimizer.warmup import warmup_scheduler
 from utils.configer import Configer
 from client_manager import client_manager
 
@@ -85,11 +85,11 @@ if __name__ == '__main__':
 
     writer = init_writer(tbpath=os.path.abspath(logdir), name_prefix=args.name_prefix)
 
-    warmup_scheduler = warmup(start_lr=config.trainer.get_start_lr(),
-                              max_lr=config.trainer.get_max_lr(),
-                              min_lr=config.trainer.get_min_lr(),
-                              base_step=config.trainer.get_base_step(),
-                              end_step=config.trainer.get_end_step())
+    w_scheduler = warmup_scheduler(start_lr=config.trainer.get_start_lr(),
+                                   max_lr=config.trainer.get_max_lr(),
+                                   min_lr=config.trainer.get_min_lr(),
+                                   base_step=config.trainer.get_base_step(),
+                                   end_step=config.trainer.get_end_step())
 
     if not num_pool == -1:
         executor = ThreadPoolExecutor(max_workers=num_pool)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
 
     client_manager = client_manager(config=config,
                                     gpus=gpus,
-                                    warmup_scheduler=warmup_scheduler,
+                                    warmup_scheduler=w_scheduler,
                                     writer=writer,
                                     executor=executor)
 
@@ -115,7 +115,11 @@ if __name__ == '__main__':
     # train
     print("\nStart training...")
     for communication_round in tqdm(range(config.trainer.get_max_iteration())):
+        client_manager.set_communication_round(communication_round=communication_round)
+
+        # seed
         set_seed(args.seed + communication_round)
+
         # sample trainer
         sampled_client_id = client_manager.sample_client()
 
@@ -125,14 +129,14 @@ if __name__ == '__main__':
         ####################################################################################################
         trained_gradients = client_manager.train(communication_round=communication_round)
 
-        # clients transmit to aggregator(server)
+        # clients transmit to server
         traffic += sum([parameter_count(g) for g in trained_gradients])
 
         # aggregate
         aggregated_gradient = client_manager.aggregate(trained_gradients=trained_gradients)
 
         # server transmit to clients
-        traffic += parameter_count(aggregated_gradient)*config.general.get_nodes()
+        traffic += parameter_count(aggregated_gradient) * config.general.get_nodes()
 
         # one step update
         client_manager.one_step_update(aggregated_gradient=aggregated_gradient)
