@@ -60,6 +60,8 @@ if __name__ == '__main__':
         print("Please set --config & --output.")
         exit(1)
 
+    time_analyze = True
+
     con_path = os.path.abspath(args.config)
     out_path = os.path.abspath(args.output)
     os.makedirs(out_path, exist_ok=True)
@@ -115,6 +117,7 @@ if __name__ == '__main__':
     # train
     print("\nStart training...")
     for communication_round in tqdm(range(config.trainer.get_max_iteration())):
+        start_time = time.time()
         client_manager.set_communication_round(communication_round=communication_round)
 
         # seed
@@ -122,18 +125,21 @@ if __name__ == '__main__':
 
         # sample trainer
         sampled_client_id = client_manager.sample_client()
-
+        
         # sample dataset
         client_manager.sample_data()
+        sample_done_time = time.time()
 
         ####################################################################################################
         trained_gradients = client_manager.train()
+        train_done_time = time.time()
 
         # clients transmit to server
         traffic += sum([parameter_count(g) for g in trained_gradients])
 
         # aggregate
         aggregated_gradient = client_manager.aggregate(trained_gradients=trained_gradients)
+        aggregate_done_time = time.time()
 
         # server transmit to clients
         traffic += parameter_count(aggregated_gradient) * config.general.get_nodes()
@@ -142,12 +148,24 @@ if __name__ == '__main__':
         test_acc, test_loss = client_manager.global_test()
         # print(test_acc, test_loss )
         client_manager.one_step_update(aggregated_gradient=aggregated_gradient)
+        one_step_done_time = time.time()
         ####################################################################################################
 
         test_acc, test_loss = client_manager.global_test()
+        global_test_done_time = time.time()
         # writer.add_scalar("test loss", test_loss, global_step=communication_round, walltime=None)
         # writer.add_scalar("test acc", test_acc, global_step=communication_round, walltime=None)
         writer.add_scalar("traffic(number_of_parameters)", traffic, global_step=communication_round, walltime=None)
+
+        # Time consume analyze:
+
+        if time_analyze:
+            print("> Total take: {:.2f} in round {}".format(global_test_done_time-start_time, communication_round))
+            print("> Sample data take: {:.2f} ({:.2f}%)".format(sample_done_time-start_time, 100*((sample_done_time-start_time)/(global_test_done_time-start_time))))
+            print("> Train take: {:.2f} ({:.2f}%)".format(train_done_time-sample_done_time, 100*((train_done_time-sample_done_time)/(global_test_done_time-start_time))))
+            print("> Aggregate take: {:.2f} ({:.2f}%)".format(aggregate_done_time-train_done_time, 100*((aggregate_done_time-train_done_time)/(global_test_done_time-start_time))))
+            print("> One step take: {:.2f} ({:.2f}%)".format(one_step_done_time-aggregate_done_time, 100*((one_step_done_time-aggregate_done_time)/(global_test_done_time-start_time))))
+            print("> Global test take: {:.2f} ({:.2f}%)".format(global_test_done_time-one_step_done_time, 100*((global_test_done_time-one_step_done_time)/(global_test_done_time-start_time))))
 
         for cid in sampled_client_id:
             client_smapled_count[cid] += 1

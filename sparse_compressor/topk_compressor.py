@@ -1,6 +1,7 @@
 import torch
 from copy import deepcopy as dcopy
 import math
+import collections
 
 
 class topkCompressor:
@@ -57,14 +58,16 @@ class topkCompressor:
         if not gradient_dict['compressed']:
             return gradient_dict
 
-        gradient_tmp = dcopy(gradient_dict['gradient'])
+        new_gradient = {}
+        for k in gradient_dict.keys():
+            if k == "gradient":
+                new_gradient["gradient"] = collections.OrderedDict({k:None for k in gradient_dict['gradient'].keys()})
+            else:
+                new_gradient[k] = gradient_dict[k]
 
-        new_gradient = dcopy(gradient_dict)
-        for k in new_gradient['gradient'].keys():
-            new_gradient['gradient'][k] = None
-
-        for k in gradient_tmp.keys():
-            j = gradient_tmp[k]
+        for k in gradient_dict['gradient'].keys():
+            #print(time.time())
+            j = gradient_dict['gradient'][k]
             new_mem, ctx = j
             shape, mask, numel = ctx
 
