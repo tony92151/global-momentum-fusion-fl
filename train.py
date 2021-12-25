@@ -146,7 +146,7 @@ if __name__ == '__main__':
 
         # one step update
         test_acc, test_loss = client_manager.global_test()
-        # print(test_acc, test_loss )
+        print("Test acc: {}, loss: {}".format(test_acc, test_loss))
         client_manager.one_step_update(aggregated_gradient=aggregated_gradient)
         one_step_done_time = time.time()
         ####################################################################################################

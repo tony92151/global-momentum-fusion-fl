@@ -16,14 +16,17 @@ class topkCompressor:
         if gradient_dict['compressed']:
             return gradient_dict
 
-        gradient_tmp = dcopy(gradient_dict['gradient'])
+        # gradient_tmp = dcopy(gradient_dict['gradient'])
 
-        new_gradient = dcopy(gradient_dict)
-        for k in new_gradient['gradient'].keys():
-            new_gradient['gradient'][k] = None
+        new_gradient = {}
+        for k in gradient_dict.keys():
+            if k == "gradient":
+                new_gradient["gradient"] = collections.OrderedDict({k:None for k in gradient_dict['gradient'].keys()})
+            else:
+                new_gradient[k] = gradient_dict[k]
 
-        for k in gradient_tmp.keys():
-            tensor = gradient_tmp[k].to(self.device)
+        for k in gradient_dict['gradient'].keys():
+            tensor = gradient_dict['gradient'][k].to(self.device)
 
             shape = list(tensor.size())
             tensor = tensor.flatten()
