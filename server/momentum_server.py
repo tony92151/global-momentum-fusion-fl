@@ -7,7 +7,7 @@ from server.aggregater import weight_aggregater
 
 class momentum_server(BASE_SERVER):
     def __init__(self, config: Configer, server_momentun: 0.9, aggregater: None, device: torch.device("cpu")):
-        super(BASE_SERVER, self).__init__(config=config, aggregater=aggregater, device=device)
+        super(momentum_server, self).__init__(config=config, aggregater=aggregater, device=device)
 
         self.server_momentun = server_momentun
         self.server_m = None
@@ -22,8 +22,8 @@ class momentum_server(BASE_SERVER):
                 self.server_m["gradient"][k] = tensor
         return self.server_m
 
-    def aggregate(self, trained_gradients: List[dict], aggregate_bn=False):
-        decompressed_gradients = [self.compressor.decompress(gradient) for gradient in trained_gradients["gradient"]]
+    def aggregate(self, trained_gradients: List[dict]):
+        decompressed_gradients = [self.compressor.decompress(gradient) for gradient in trained_gradients]
         aggregated_gradient = self.aggregater(gradient_list=decompressed_gradients, device=self.device)
         m_aggregated_gradient = self.update(aggregated_gradient[0])
         return self.compressor.compress(gradient_dict=m_aggregated_gradient, compress=False)

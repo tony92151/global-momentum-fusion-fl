@@ -81,7 +81,7 @@ if __name__ == '__main__':
         num_pool = int(num_pool)
         print("\nPool: {}".format(num_pool))
 
-    logdir = args.tensorboard_path if args.tensorboard_path is not None else config.general.logdir()
+    logdir = args.tensorboard_path if args.tensorboard_path is not None else config.general.get_logdir()
 
     writer = init_writer(tbpath=os.path.abspath(logdir), name_prefix=args.name_prefix)
 
@@ -97,10 +97,10 @@ if __name__ == '__main__':
         executor = None
 
     client_manager = client_manager(config=config,
-                                    gpus=gpus,
                                     warmup_scheduler=w_scheduler,
                                     writer=writer,
-                                    executor=executor)
+                                    executor=executor, 
+                                    available_gpu=gpus)
 
     set_seed(args.seed + 1)
     net = client_manager.set_init_mdoel()
@@ -127,7 +127,7 @@ if __name__ == '__main__':
         client_manager.sample_data()
 
         ####################################################################################################
-        trained_gradients = client_manager.train(communication_round=communication_round)
+        trained_gradients = client_manager.train()
 
         # clients transmit to server
         traffic += sum([parameter_count(g) for g in trained_gradients])
@@ -139,12 +139,14 @@ if __name__ == '__main__':
         traffic += parameter_count(aggregated_gradient) * config.general.get_nodes()
 
         # one step update
+        test_acc, test_loss = client_manager.global_test()
+        # print(test_acc, test_loss )
         client_manager.one_step_update(aggregated_gradient=aggregated_gradient)
         ####################################################################################################
 
         test_acc, test_loss = client_manager.global_test()
-        writer.add_scalar("test loss", test_loss, global_step=communication_round, walltime=None)
-        writer.add_scalar("test acc", test_acc, global_step=communication_round, walltime=None)
+        # writer.add_scalar("test loss", test_loss, global_step=communication_round, walltime=None)
+        # writer.add_scalar("test acc", test_acc, global_step=communication_round, walltime=None)
         writer.add_scalar("traffic(number_of_parameters)", traffic, global_step=communication_round, walltime=None)
 
         for cid in sampled_client_id:

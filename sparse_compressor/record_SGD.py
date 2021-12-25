@@ -69,10 +69,10 @@ class RSGD(Optimizer):
                         weight_decay=weight_decay, nesterov=nesterov)
         if nesterov and (momentum <= 0 or dampening != 0):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")
-        super(SGD, self).__init__(params, defaults)
+        super(RSGD, self).__init__(params, defaults)
 
     def __setstate__(self, state):
-        super(SGD, self).__setstate__(state)
+        super(RSGD, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('nesterov', False)
 
@@ -130,14 +130,21 @@ class RSGD(Optimizer):
 
     def get_last_gradient(self, model):
         model_dict = dcopy(model).cpu().state_dict()
+        
+        key_to_remove = []
+        for i, v in enumerate(model_dict.keys()):
+            if ("running" in v) or ("batches" in v):
+                key_to_remove.append(v)
 
+        for k in key_to_remove:
+            model_dict.pop(k)
+        
+        
         if not len(self.opt_memory) == len(model_dict):
-            raise ValueError("In opti.get_last_gradient() model_dict len not match memory len.")
+            raise ValueError("In opti.get_last_gradient() model_dict len({}) not match memory len({}).".format(len(model_dict), len(self.opt_memory)))
 
-        idx = 0
-        for k in model_dict.keys():
-            model_dict[k] = self.opt_memory[idx]
-            idx += 1
+        for i,k in enumerate(model_dict.keys()):
+            model_dict[k] = self.opt_memory[i]
 
         return {"compressed": False, "gradient": model_dict}
 

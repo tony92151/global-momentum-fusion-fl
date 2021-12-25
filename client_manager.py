@@ -15,25 +15,19 @@ from sparse_compressor.topk_compressor import topkCompressor
 
 class client_manager:
     def __init__(self, config: Configer,
-                 gpus=None,
                  warmup_scheduler=None,
                  writer=None,
                  executor=None,
                  available_gpu=None):
 
-        self.available_gpu = available_gpu
         self.config = config
-        if gpus is None:
-            self.gpus = []
-        else:
-            self.gpus = gpus
-
         self.warmup_scheduler = warmup_scheduler
         self.writer = writer
         self.executor = executor
+        self.available_gpu = available_gpu
 
         self.clients = []
-        self.server = get_server(config=self.config)
+        self.server = get_server(con=self.config)
 
         print("\nInit dataloader...")
         self.dataloaders, emb = DATALOADER(config=config, emd_measurement=True)
@@ -45,7 +39,7 @@ class client_manager:
         self.sampled_client_id = []
         self.init_clients()
 
-    def init_clients(self, trainer, compressor):
+    def init_clients(self):
         print("\nInit trainers...")
         print("Nodes: {}".format(self.config.general.get_nodes()))
 
@@ -54,11 +48,17 @@ class client_manager:
         compressor = topkCompressor()
 
         for i in tqdm(range(self.config.general.get_nodes())):
+            if (self.available_gpu is not None) and (not self.available_gpu  == []):
+                device = torch.device("cuda:{}".format(self.available_gpu[i%len(self.available_gpu)]))
+            else:
+                device = torch.device("cpu")
+
             self.clients.append(
                 client(config=self.config,
                        cid=i,
                        compressor=compressor,
-                       trainer=trainer,
+                       trainer=trainer, 
+                       warmup_scheduler=self.warmup_scheduler,
                        data={
                            "train_dataloader": self.dataloaders['train_s'][i],
                            "test_dataloader": self.dataloaders['test_s'][i] if self.dataloaders[
@@ -67,8 +67,7 @@ class client_manager:
                            "test_global_dataloader": self.dataloaders['test']
                        },
                        writer=self.writer,
-                       device=torch.device("cuda:{}".format(
-                           i % self.available_gpu)) if self.available_gpu is not None else torch.device("cpu")
+                       device=device
                        )
             )
 
@@ -110,7 +109,7 @@ class client_manager:
             del futures
 
             for client in self.clients:
-                if client.cid in self.sampled_trainer:
+                if client.cid in self.sampled_client_id:
                     trained_gradients.append(client.get_gradient())
         else:
             for client in self.clients:
@@ -121,14 +120,13 @@ class client_manager:
 
             for client in self.clients:
                 if client.cid in self.sampled_client_id:
-                    client.append(client.get_gradient())
+                    trained_gradients.append(client.get_gradient())
 
         return trained_gradients
 
     def global_test(self):
-        # self.clients[0].test(da)
-        # return test_acc, test_loss
-        pass
+        test_acc, test_loss = self.clients[0].global_test()
+        return test_acc, test_loss
 
     def one_step_update(self, aggregated_gradient):
         for client in self.clients:

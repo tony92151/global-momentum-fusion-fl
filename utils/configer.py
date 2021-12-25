@@ -140,18 +140,18 @@ class Configer:
                 self.dgc = config_dgc(self.config)
             except KeyError:
                 print("config read: skip dgc")
-        # elif self.compression.get_algorithm() == "sgc":
-        #     try:
-        #         self.gf = config_sgc(self.config)
-        #     except KeyError:
-        #         print("config read: skip gf")
-        # elif self.compression.get_algorithm() == "gfdgc":
-        #     try:
-        #         self.gfgc = config_gfdgc(self.config)
-        #     except KeyError:
-        #         print("config read: skip gfgc")
-        # elif self.compression.get_algorithm() == "gfgc":
-        #     try:
-        #         self.sgc = config_gfgc(self.config)
-        #     except KeyError:
-        #         print("config read: skip sgc")
+        elif self.compression.get_algorithm() == "sgc":
+            try:
+                self.gf = config_sgc(self.config)
+            except KeyError:
+                print("config read: skip gf")
+        elif self.compression.get_algorithm() == "gfdgc":
+            try:
+                self.gfgc = config_gfdgc(self.config)
+            except KeyError:
+                print("config read: skip gfgc")
+        elif self.compression.get_algorithm() == "gfgc":
+            try:
+                self.sgc = config_gfgc(self.config)
+            except KeyError:
+                print("config read: skip sgc")

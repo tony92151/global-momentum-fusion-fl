@@ -365,13 +365,6 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
                                               batch_size=config.trainer.get_local_bs(),
                                               clients=config.general.get_nodes())
 
-    datatype = os.getenv('dataset_type', config.trainer.get_dataset_type())
-    if datatype == "iid":
-        dataloaders["train_s"] = dataloaders["train_s_iid"]
-        print("\nUse iid dataloader...")
-    else:
-        print("\nUse non-iid dataloader...")
-
     if emd_measurement:
         number_of_class = 0
         if "cifar10" in config.trainer.get_dataset_path():

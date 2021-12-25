@@ -31,13 +31,19 @@ class BASE_TRAINER:
         if self.verbose:
             print(val)
 
-    def set_mdoel(self, model):
-        self.last_model = dcopy(model)
+    def set_model(self, model):
+        self.model = dcopy(model)
 
     def train_run(self, data=None, lr=None):
         raise NotImplementedError
 
     def test_run(self, data=None):
+        raise NotImplementedError
+
+    def test_global_run(self, data=None):
+        raise NotImplementedError
+
+    def test(self, data=None):
         raise NotImplementedError
 
     def one_step_update(self, aggregated_gradient=None, lr=None):
@@ -97,105 +103,3 @@ class BASE_TRAINER:
                     self.last_de_gradient["gradient"][i])
 
 
-class lstm_trainer(trainer):
-    def __init__(self, **kwargs):
-        super(lstm_trainer, self).__init__(**kwargs)
-
-    def train_run(self, round_, base_model=None):
-        if base_model is None:
-            model = copy.deepcopy(self.last_model)
-        else:
-            model = copy.deepcopy(base_model)
-
-        lr = self.warmup.get_lr_from_step(round_)
-        model.train().to(self.device)
-        chunk = self.config.trainer.get_max_iteration() / len(self.config.dgc.get_compress_ratio())
-        chunk_ = self.config.trainer.get_max_iteration() / len(self.config.gf.get_fusing_ratio())
-        cr = self.config.dgc.get_compress_ratio()[min(len(self.config.dgc.get_compress_ratio()), int(round_ / chunk))]
-        fr = self.config.gf.get_fusing_ratio()[min(len(self.config.gf.get_fusing_ratio()), int(round_ / chunk_))]
-        if self.cid == 0 and self.writer is not None:
-            self.writer.add_scalar("Compress ratio", cr, global_step=round_, walltime=None)
-            if self.config.gf.get_global_fusion():
-                self.writer.add_scalar("Fusion ratio", fr, global_step=round_, walltime=None)
-            self.writer.add_scalar("Learning rate", lr, global_step=round_, walltime=None)
-
-        optimizer = FEDOPTS(config=self.config, params=model.parameters(), lr=lr,
-                            dgc_momentum=self.config.dgc.get_momentum(),
-                            compress_ratio=cr,
-                            fusing_ratio=fr,
-                            device=self.device)
-
-        if self.last_state is not None:
-            optimizer.set_state(self.last_state)
-
-        eploss = []
-        self.print_("trainer >> cid: {} >> train start, {}".format(self.cid, time.time()))
-        for i in range(self.config.trainer.get_local_ep()):
-            losses = []
-            lstm_state = model.zero_state(batch_size=self.config.trainer.get_local_bs(), device=self.device)
-            for data, target in self.sampled_data:
-                data = data.to(self.device)
-                target = target.to(self.device)
-                optimizer.zero_grad()
-                output, lstm_state = model(data, lstm_state)
-                loss = self.loss_function(output, target)
-                loss.backward()
-                losses.append(loss.item())
-                optimizer.step()
-            losses = sum(losses) / len(losses)
-            eploss.append(losses)
-
-        optimizer.record_batchnorm(model=model)
-        self.print_("trainer >> cid: {} >> compress, {}".format(self.cid, time.time()))
-        ############################################################
-        if self.config.trainer.get_optimizer() == "SGCSGD":
-            optimizer.compress(compress=True)
-
-        elif self.config.trainer.get_optimizer() == "GFGCSGD":
-            if round_ < self.config.trainer.get_base_step() and self.config.gfgc.get_global_fusion_after_warmup():
-                optimizer.compress(compress=True)
-            else:
-                optimizer.compress(global_momentum=self.global_momentum, compress=True)
-        else:
-            if self.config.dgc.get_dgc():
-                if not self.config.gf.get_global_fusion() or \
-                        (
-                                round_ < self.config.trainer.get_base_step() and self.config.gf.get_global_fusion_after_warmup()):
-                    optimizer.compress(compress=True, momentum_correction=True)
-                else:
-                    optimizer.compress(global_momentum=self.global_momentum, compress=True,
-                                       momentum_correction=True)
-            else:
-                optimizer.compress(compress=False, momentum_correction=False)
-        ############################################################
-        eploss = sum(eploss) / len(eploss)
-        if self.writer is not None:
-            self.writer.add_scalar("loss of {}".format(self.cid), eploss, global_step=round_, walltime=None)
-        # update bn
-        self.last_gradient = copy.deepcopy(optimizer.get_compressed_gradient())
-        self.training_loss = eploss
-        self.print_("trainer >> cid: {} >> done, {}".format(self.cid, time.time()))
-        self.last_state = optimizer.get_state()
-        del optimizer
-        del model
-        return
-
-    def eval_run(self, round_):
-        model = copy.deepcopy(self.last_model)
-        model.eval().to(self.device)
-        self.print_("trainer >> cid: {} >> eval start, {}".format(self.cid, time.time()))
-        losses = []
-
-        lstm_state = model.zero_state(batch_size=self.config.trainer.get_local_bs(), device=self.device)
-        for data, target in self.sampled_data:
-            data = data.to(self.device)
-            target = target.to(self.device)
-            output, lstm_state = model(data, lstm_state)
-            loss = self.loss_function(output, target)
-            losses.append(loss.item())
-        losses = sum(losses) / len(losses)
-
-        if self.writer is not None:
-            self.writer.add_scalar("loss of {}".format(self.cid), losses, global_step=round_, walltime=None)
-
-        return
