@@ -41,7 +41,7 @@ if __name__ == '__main__':
     with open(os.path.join(test_json_path), "r") as file:
         test_context = json.load(file)
 
-    os.makedirs(os.path.join(os.path.abspath("."), "femnist"), exist_ok=True)
+    os.makedirs(os.path.join(os.path.abspath("."), "shakespeare"), exist_ok=True)
     torch.save(train_context, os.path.join(os.path.abspath("."), "shakespeare", "train_data.pt"))
     torch.save(test_context, os.path.join(os.path.abspath("."), "shakespeare", "test_data.pt"))
     print("\nSave : {}".format(os.path.join(os.path.abspath("."), "shakespeare", "train_data.pt")))

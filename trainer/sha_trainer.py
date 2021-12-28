@@ -11,7 +11,7 @@ from sparse_compressor.record_SGD import RSGD
 
 class sha_trainer(BASE_TRAINER):
     def __init__(self, config=None, cid=None, warmup_scheduler=None, device=torch.device("cpu")):
-        super(BASE_TRAINER, self).__init__(config=config, cid=cid, warmup_scheduler=warmup_scheduler, device=device)
+        super(sha_trainer, self).__init__(config=config, cid=cid, warmup_scheduler=warmup_scheduler, device=device)
         self.verbose = True
 
     def train_run(self, model=None, data=None, lr=None):
@@ -19,7 +19,7 @@ class sha_trainer(BASE_TRAINER):
             model = dcopy(self.model)
         else:
             model = dcopy(model)
-            
+
         model.train().to(self.device)
 
         optimizer = FEDOPTS(config=self.config, params=model.parameters(), lr=lr)
@@ -31,12 +31,13 @@ class sha_trainer(BASE_TRAINER):
 
         for i in range(self.config.trainer.get_local_ep()):
             losses = []
-            lstm_state = model.zero_state(batch_size=self.config.trainer.get_local_bs(), device=self.device)
-            for data, target in self.sampled_data:
+            # lstm_state = model.zero_state(batch_size=self.config.trainer.get_local_bs(), device=self.device)
+            for data, target in data:
                 data = data.to(self.device)
                 target = target.to(self.device)
                 optimizer.zero_grad()
-                output, lstm_state = model(data, lstm_state)
+                # output, lstm_state = model(data, lstm_state)
+                output, _ = model(data)
                 loss = self.loss_function(output, target)
                 loss.backward()
                 losses.append(loss.item())
@@ -58,20 +59,27 @@ class sha_trainer(BASE_TRAINER):
         del model
         return train_acc, train_loss
 
-    # test with train dataloader
     def test_run(self, data=None):
-        model = dcopy(self.last_model)
+        self.print_("client >> cid: {} >> eval start, {}".format(self.cid, time.time()))
+        return self.test(data=data)
+
+    def test_global_run(self, data=None):
+        return self.test(data=data)
+
+    def test(self, data=None):
+        model = dcopy(self.model)
         model.eval().to(self.device)
         self.print_("trainer >> cid: {} >> eval start, {}".format(self.cid, time.time()))
         losses = []
         correct = 0
         total_data = 0
 
-        lstm_state = model.zero_state(batch_size=self.config.trainer.get_local_bs(), device=self.device)
-        for data, target in self.sampled_data:
+        # lstm_state = model.zero_state(batch_size=self.config.trainer.get_local_bs(), device=self.device)
+        for data, target in data:
             data = data.to(self.device)
             target = target.to(self.device)
-            output, lstm_state = model(data, lstm_state)
+            # output, lstm_state = model(data, lstm_state)
+            output, _ = model(data)
             loss = self.loss_function(output, target)
             losses.append(loss.item())
 
