@@ -17,24 +17,22 @@ class sgc_client(BASE_CLIENT):
         super(sgc_client, self).__init__(config=config, cid=cid, compressor=compressor,
                                          trainer=trainer, data=data, warmup_scheduler=warmup_scheduler,
                                          writer=writer, device=device)
-        self.memory = sgc_memory(dgc_momentum=self.config.dgc.get_momentum(),
+        self.memory = sgc_memory(sgc_momentum=self.config.sgc.get_local_momentum(),
                                  device=self.device)
 
         self.warmup_scheduler = warmup_scheduler
         self.compress_rate_scheduler = compress_rate_scheduler(max_iteration=config.trainer.get_max_iteration(),
-                                                               compress_rate_list=config.dgc.get_compress_rate())
-        # global fusion
-        self.global_gradient = None
-        self.global_momentum = self.config.gfdgc.get_global_momentum()
+                                                               compress_rate_list=config.sgc.get_compress_rate())
+
 
     def train(self):
         self.loginfo()
         # local update
-        self.sgc_local_update()
+        train_model = self.sgc_local_update()
 
         # train
         lr = self.warmup_scheduler.get_lr_from_step(self.communication_round)
-        train_acc, train_loss = self.trainer.train_run(data=self.sampled_data, lr=lr)
+        train_acc, train_loss = self.trainer.train_run(model=train_model, data=self.sampled_data, lr=lr)
         self.sampled_data = None
 
         if self.writer is not None:
@@ -49,12 +47,7 @@ class sgc_client(BASE_CLIENT):
         # compressed
         self.compressor.set_compress_rate(
             self.compress_rate_scheduler.get_compress_rate_from_step(self.communication_round))
-        fusion_ratio = self.fusion_ratio_scheduler.get_fusion_ratio_from_step(self.communication_round)
-        # if global_gradient is None, it skip fusion technique and return  compressor.compress() result
-        compressed_compensate_gradient = self.compressor.gf_compress(gradient_dict=compensate_gradient,
-                                                                     global_gradient_dict=self.global_gradient,
-                                                                     fusion_ratio=fusion_ratio,
-                                                                     compress=True)
+        compressed_compensate_gradient = self.compressor.compress(gradient_dict=compensate_gradient, compress=True)
 
         # update
         self.memory.update(compressed_compensate_gradient)
@@ -86,13 +79,16 @@ class sgc_client(BASE_CLIENT):
             self.writer.add_scalar("Learning rate", lr, global_step=self.communication_round, walltime=None)
 
     def sgc_local_update(self):
-        self.print_("trainer >> cid: {} >> sgc_local_update, {}".format(self.cid, time.time()))
-        model = dcopy(self.train.model)
+        if self.memory.momentums is None:
+            return None
+        print("trainer >> cid: {} >> sgc_local_update, {}".format(self.cid, time.time()))
+        model = dcopy(self.trainer.model)
         model.to(self.device).train()
-        optimizer = torch.optim.SGD(params=model.parameters(), lr=-1)
+        optimizer = torch.optim.SGD(params=model.parameters(), lr=1)
         self.trainer.set_gradient(optimizer=optimizer, uncompressed_aggregate_gradient=self.memory.momentums)
         optimizer.step()
-        self.self.train.model = dcopy(model)
+        # self.trainer.model = dcopy(model)
+        return model
 
 
 class sgc_memory:

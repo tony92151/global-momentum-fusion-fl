@@ -14,8 +14,12 @@ class cifar_trainer(BASE_TRAINER):
         super(cifar_trainer, self).__init__(config=config, cid=cid, warmup_scheduler=warmup_scheduler, device=device)
         self.verbose = True
 
-    def train_run(self, data=None, lr=None):
-        model = dcopy(self.model)
+    def train_run(self, model=None, data=None, lr=None):
+        if model is None:
+            model = dcopy(self.model)
+        else:
+            model = dcopy(model)
+            
         model.train().to(self.device)
 
         optimizer = FEDOPTS(config=self.config, params=model.parameters(), lr=lr)

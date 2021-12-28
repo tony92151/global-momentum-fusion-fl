@@ -41,7 +41,7 @@ class fusion_ratio_scheduler:
     def __init__(self, max_iteration: int, fusing_ratio_list: List):
         self.max_iteration = max_iteration
         self.fusing_ratio_list = fusing_ratio_list
-        self.chunk = self.max_iteration / len(self.compress_rate_list)
+        self.chunk = self.max_iteration / len(self.fusing_ratio_list)
 
     def get_fusion_ratio_from_step(self, step):
         fr = self.fusing_ratio_list[min(len(self.fusing_ratio_list), int(step / self.chunk))]

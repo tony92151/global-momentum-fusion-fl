@@ -24,7 +24,7 @@ class gfdgc_client(BASE_CLIENT):
 
         self.warmup_scheduler = warmup_scheduler
         self.compress_rate_scheduler = compress_rate_scheduler(max_iteration=config.trainer.get_max_iteration(),
-                                                               compress_rate_list=config.dgc.get_compress_rate())
+                                                               compress_rate_list=config.gfdgc.get_compress_rate())
         self.fusion_ratio_scheduler = fusion_ratio_scheduler(max_iteration=config.trainer.get_max_iteration(),
                                                              fusing_ratio_list=config.gfdgc.get_fusing_ratio())
         # global fusion

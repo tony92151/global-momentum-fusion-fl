@@ -16,10 +16,8 @@ class momentum_server(BASE_SERVER):
         if self.server_m is None:
             self.server_m = aggregated_gradient
         else:
-            for k in self.aggregated_gradient["gradient"].keys():
-                tensor = torch.mul(self.server_m["gradient"][k], self.server_momentun)
-                tensor = torch.add(tensor, aggregated_gradient["gradient"][k])
-                self.server_m["gradient"][k] = tensor
+            for k in aggregated_gradient["gradient"].keys():
+                self.server_m["gradient"][k].mul_(self.server_momentun).add_(aggregated_gradient["gradient"][k])
         return self.server_m
 
     def aggregate(self, trained_gradients: List[dict]):

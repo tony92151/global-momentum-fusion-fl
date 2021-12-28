@@ -34,7 +34,7 @@ class BASE_TRAINER:
     def set_model(self, model):
         self.model = dcopy(model)
 
-    def train_run(self, data=None, lr=None):
+    def train_run(self, model=None, data=None, lr=None):
         raise NotImplementedError
 
     def test_run(self, data=None):

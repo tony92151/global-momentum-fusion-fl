@@ -14,5 +14,5 @@ def get_client(con: Configer):
         return sgc_client
     elif con.compression.get_algorithm() == "gfdgc":
         return gfdgc_client
-    elif con.compression.get_algorithm() == "sgfgc":
+    elif con.compression.get_algorithm() == "gfgc":
         return gfgc_client

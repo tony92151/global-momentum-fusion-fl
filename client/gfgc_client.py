@@ -17,15 +17,17 @@ class gfgc_client(BASE_CLIENT):
         super(gfgc_client, self).__init__(config=config, cid=cid, compressor=compressor,
                                           trainer=trainer, data=data, warmup_scheduler=warmup_scheduler,
                                           writer=writer, device=device)
-        self.memory = gfgc_memory(gfgc_momentum=self.config.dgc.get_momentum(),
+        self.memory = gfgc_memory(gfgc_momentum=self.config.gfgc.get_momentum(),
                                   device=self.device)
 
         self.warmup_scheduler = warmup_scheduler
         self.compress_rate_scheduler = compress_rate_scheduler(max_iteration=config.trainer.get_max_iteration(),
-                                                               compress_rate_list=config.dgc.get_compress_rate())
+                                                               compress_rate_list=config.gfgc.get_compress_rate())
+        self.fusion_ratio_scheduler = fusion_ratio_scheduler(max_iteration=config.trainer.get_max_iteration(),
+                                                             fusing_ratio_list=config.gfgc.get_fusing_ratio())
         # global fusion
         self.global_gradient = None
-        self.global_momentum = self.config.gfdgc.get_global_momentum()
+        self.global_momentum = self.config.gfgc.get_global_momentum()
 
     def train(self):
         self.loginfo()

@@ -87,7 +87,7 @@ class topkCompressor:
             mix_tensor_calculate = torch.add(normalize(tensor_calculate.abs()),
                                              normalize(gf_tensor_calculate.abs()).mul(fusion_ratio/(1-fusion_ratio)))
 
-            mix_tensor_calculate_filtered = torch.add(mix_tensor_calculate[mix_tensor_calculate > 0])
+            mix_tensor_calculate_filtered = mix_tensor_calculate[mix_tensor_calculate > 0]
 
             if len(tensor_calculate) == 0 or self.compress_rate == 1.0:
                 compress = False

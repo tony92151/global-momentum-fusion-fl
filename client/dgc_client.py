@@ -93,8 +93,8 @@ class dgc_memory:
         #     copy_gradient['gradient'][k].to(self.device)
 
         if self.momentums is None and self.velocities is None:
-            for k in self.copy_gradient['gradient'].keys():
-                self.copy_gradient['gradient'][k].to(self.device)
+            for k in copy_gradient['gradient'].keys():
+                copy_gradient['gradient'][k].to(self.device)
             self.momentums = dcopy(copy_gradient)
             self.velocities = dcopy(copy_gradient)
             vec = self.velocities
