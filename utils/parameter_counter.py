@@ -11,4 +11,4 @@ def parameter_count(gradient_dict=None):
     elif isinstance(gradient_dict, dict):
         # gradient_dict = {"compressed":True, "gradient": (tensor, (shape, mask, numel))}
         # sum the mask to get number of parameters in each layer and sum these numbers
-        return sum([len(gradient_dict["gradient"][k]) for k in gradient_dict["gradient"].keys()])
+        return sum([len(gradient_dict["gradient"][k][0]) for k in gradient_dict["gradient"].keys()])
