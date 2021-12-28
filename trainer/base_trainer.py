@@ -94,12 +94,12 @@ class BASE_TRAINER:
     #         self.update_global_momentum()
     #     return
 
-    def update_global_momentum(self):
-        if self.global_momentum is None and self.last_de_gradient is not None:
-            self.global_momentum = copy.deepcopy(self.last_de_gradient["gradient"])
-        else:
-            for i in range(len(self.global_momentum)):
-                self.global_momentum[i].mul_(self.config.gf.get_fusion_momentum()).add_(
-                    self.last_de_gradient["gradient"][i])
+    # def update_global_momentum(self):
+    #     if self.global_momentum is None and self.last_de_gradient is not None:
+    #         self.global_momentum = copy.deepcopy(self.last_de_gradient["gradient"])
+    #     else:
+    #         for i in range(len(self.global_momentum)):
+    #             self.global_momentum[i].mul_(self.config.gf.get_fusion_momentum()).add_(
+    #                 self.last_de_gradient["gradient"][i])
 
 

@@ -53,18 +53,17 @@ class cifar_trainer(BASE_TRAINER):
         del model
         return train_acc, train_loss
 
-    
     def test_run(self, data=None):
         self.print_("client >> cid: {} >> eval start, {}".format(self.cid, time.time()))
         return self.test(data=data)
 
     def test_global_run(self, data=None):
         return self.test(data=data)
-    
+
     def test(self, data=None):
         model = dcopy(self.model)
         model.to(self.device)
-    
+
         losses = []
         correct = 0
         total_data = 0

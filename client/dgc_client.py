@@ -15,9 +15,10 @@ class dgc_client(BASE_CLIENT):
     def __init__(self, config: Configer, cid=None, compressor=None, trainer=None,
                  data=None, warmup_scheduler=None, writer=None, device=torch.device("cpu")):
         super(dgc_client, self).__init__(config=config, cid=cid, compressor=compressor,
-                                          trainer=trainer, data=data, warmup_scheduler=warmup_scheduler,
-                                          writer=writer, device=device)
-        self.memory = dgc_memory(dgc_momentum=0.9, device=self.device)
+                                         trainer=trainer, data=data, warmup_scheduler=warmup_scheduler,
+                                         writer=writer, device=device)
+        self.memory = dgc_memory(dgc_momentum=self.config.dgc.get_momentum(),
+                                 device=self.device)
 
         self.warmup_scheduler = warmup_scheduler
         self.compress_rate_scheduler = compress_rate_scheduler(max_iteration=config.trainer.get_max_iteration(),
@@ -33,8 +34,10 @@ class dgc_client(BASE_CLIENT):
         self.sampled_data = None
 
         if self.writer is not None:
-            self.writer.add_scalar("train_acc of {}".format(self.cid), train_acc, global_step=self.communication_round, walltime=None)
-            self.writer.add_scalar("train_loss of {}".format(self.cid), train_loss, global_step=self.communication_round, walltime=None)
+            self.writer.add_scalar("train_acc of {}".format(self.cid), train_acc, global_step=self.communication_round,
+                                   walltime=None)
+            self.writer.add_scalar("train_loss of {}".format(self.cid), train_loss,
+                                   global_step=self.communication_round, walltime=None)
 
         # compensate
         compensate_gradient = self.memory.compensate(self.trainer.last_gradient)
@@ -54,13 +57,15 @@ class dgc_client(BASE_CLIENT):
         self.loginfo()
         test_acc, test_loss = self.trainer.test_run(data=self.data['test_dataloader'])
         if self.writer is not None:
-            self.writer.add_scalar("test_acc of {}".format(self.cid), test_acc, global_step=self.communication_round, walltime=None)
-            self.writer.add_scalar("test_loss of {}".format(self.cid), test_loss, global_step=self.communication_round, walltime=None)
+            self.writer.add_scalar("test_acc of {}".format(self.cid), test_acc, global_step=self.communication_round,
+                                   walltime=None)
+            self.writer.add_scalar("test_loss of {}".format(self.cid), test_loss, global_step=self.communication_round,
+                                   walltime=None)
 
     def one_step_update(self, aggregated_gradient=None):
         if aggregated_gradient["compressed"]:
             aggregated_gradient = self.compressor.decompress(aggregated_gradient)
-            
+
         lr = self.warmup_scheduler.get_lr_from_step(self.communication_round)
         self.trainer.one_step_update(aggregated_gradient=aggregated_gradient, lr=lr)
 
@@ -84,10 +89,12 @@ class dgc_memory:
             raise ValueError("DGC compensate expect input un-compressed gradient.")
 
         copy_gradient = dcopy(gradient)
-        for k in copy_gradient['gradient'].keys():
-            copy_gradient['gradient'][k].to(self.device)
+        # for k in copy_gradient['gradient'].keys():
+        #     copy_gradient['gradient'][k].to(self.device)
 
         if self.momentums is None and self.velocities is None:
+            for k in self.copy_gradient['gradient'].keys():
+                self.copy_gradient['gradient'][k].to(self.device)
             self.momentums = dcopy(copy_gradient)
             self.velocities = dcopy(copy_gradient)
             vec = self.velocities
@@ -102,11 +109,10 @@ class dgc_memory:
         if not compressed_gradient["compressed"]:
             raise ValueError("DGC update expect input compressed gradient.")
 
-        copy_gradient = dcopy(compressed_gradient)
-        for k in copy_gradient['gradient'].keys():
-            new_mem, ctx = copy_gradient['gradient'][k]
+        for k in compressed_gradient['gradient'].keys():
+            new_mem, ctx = compressed_gradient['gradient'][k]
             shape, mask, numel = ctx
-            
+
             indices, = torch.where(torch.BoolTensor(mask).to(self.device))
             self.momentums["gradient"][k] = \
                 dcopy(self.momentums["gradient"][k]).view(-1).index_fill_(0, indices, 0).view(shape).detach()
