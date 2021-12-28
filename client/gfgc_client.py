@@ -82,7 +82,9 @@ class gfgc_client(BASE_CLIENT):
         if self.cid == 0 and self.writer is not None:
             cr = self.compress_rate_scheduler.get_compress_rate_from_step(self.communication_round)
             lr = self.warmup_scheduler.get_lr_from_step(self.communication_round)
-            self.writer.add_scalar("Compress ratio", cr, global_step=self.communication_round, walltime=None)
+            fr = self.fusion_ratio_scheduler.get_fusion_ratio_from_step(self.communication_round)
+            self.writer.add_scalar("Compress rate", cr, global_step=self.communication_round, walltime=None)
+            self.writer.add_scalar("Fusion ratio", fr, global_step=self.communication_round, walltime=None)
             self.writer.add_scalar("Learning rate", lr, global_step=self.communication_round, walltime=None)
 
 
