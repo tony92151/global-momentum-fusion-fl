@@ -87,9 +87,9 @@ class sgc_client(BASE_CLIENT):
         optimizer = torch.optim.SGD(params=model.parameters(), lr=1)
         self.trainer.set_gradient(optimizer=optimizer, uncompressed_aggregate_gradient=self.memory.momentums)
         optimizer.step()
-        # return model
-        self.trainer.model = dcopy(model)
-        return None
+        return model
+        # self.trainer.model = dcopy(model)
+        # return None
 
 
 
@@ -113,7 +113,8 @@ class sgc_memory:
                 self.momentums['gradient'][k].to(self.device)
         else:
             for k in copy_gradient['gradient'].keys():
-                self.momentums["gradient"][k].add_(copy_gradient['gradient'][k].to(self.device).mul_(self.sgc_momentum))
+                self.momentums["gradient"][k].add_(copy_gradient['gradient'][k].to(self.device))
+                # self.momentums["gradient"][k].add_(copy_gradient['gradient'][k].to(self.device).mul_(self.sgc_momentum))
 
         return self.momentums
 
