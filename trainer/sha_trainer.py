@@ -96,6 +96,9 @@ class sha_trainer(BASE_TRAINER):
         if aggregated_gradient["compressed"]:
             raise ValueError("In trainer.one_step_update(), input aggregated_gradient should be un-compressed.")
 
+        if lr is None:
+            lr = 1
+
         self.print_("trainer >> cid: {} >> one_step_update, {}".format(self.cid, time.time()))
         model = dcopy(self.model)
         model.to(self.device).train()
