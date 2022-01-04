@@ -27,8 +27,6 @@ echo "GPU : $gpu"
 echo "tbpath : $tbpath"
 
 
-export compress_method="DGC"
-
 for (( i = 0; i < 7; i++ ))
 do
 export index_path="./data/cifar10/test$i/index.json"
