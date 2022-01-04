@@ -77,8 +77,9 @@ class gfdgc_client(BASE_CLIENT):
         if aggregated_gradient["compressed"]:
             aggregated_gradient = self.compressor.decompress(aggregated_gradient)
 
-        lr = self.warmup_scheduler.get_lr_from_step(self.communication_round)
-        self.trainer.one_step_update(aggregated_gradient=aggregated_gradient, lr=lr)
+        # lr = self.warmup_scheduler.get_lr_from_step(self.communication_round)
+        # self.trainer.one_step_update(aggregated_gradient=aggregated_gradient, lr=lr)
+        self.trainer.one_step_update(aggregated_gradient=aggregated_gradient)
 
         if self.global_gradient is None:
             self.global_gradient = aggregated_gradient

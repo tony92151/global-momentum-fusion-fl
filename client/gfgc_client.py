@@ -75,8 +75,9 @@ class gfgc_client(BASE_CLIENT):
         if aggregated_gradient["compressed"]:
             aggregated_gradient = self.compressor.decompress(aggregated_gradient)
 
-        lr = self.warmup_scheduler.get_lr_from_step(self.communication_round)
-        self.trainer.one_step_update(aggregated_gradient=aggregated_gradient, lr=lr)
+        # lr = self.warmup_scheduler.get_lr_from_step(self.communication_round)
+        # self.trainer.one_step_update(aggregated_gradient=aggregated_gradient, lr=lr)
+        self.trainer.one_step_update(aggregated_gradient=aggregated_gradient)
 
     def loginfo(self):
         if self.cid == 0 and self.writer is not None:
