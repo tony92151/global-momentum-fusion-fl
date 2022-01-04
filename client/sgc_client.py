@@ -17,13 +17,13 @@ class sgc_client(BASE_CLIENT):
         super(sgc_client, self).__init__(config=config, cid=cid, compressor=compressor,
                                          trainer=trainer, data=data, warmup_scheduler=warmup_scheduler,
                                          writer=writer, device=device)
-        self.memory = sgc_memory(sgc_momentum=self.config.sgc.get_local_momentum(),
-                                 device=self.device)
+        # self.memory = sgc_memory(sgc_momentum=self.config.sgc.get_local_momentum(),
+        #                          device=self.device)
+        self.memory = sgc_memory(device=self.device)
 
         self.warmup_scheduler = warmup_scheduler
         self.compress_rate_scheduler = compress_rate_scheduler(max_iteration=config.trainer.get_max_iteration(),
                                                                compress_rate_list=config.sgc.get_compress_rate())
-
 
     def train(self):
         self.loginfo()
@@ -92,10 +92,9 @@ class sgc_client(BASE_CLIENT):
         # return None
 
 
-
 class sgc_memory:
-    def __init__(self, sgc_momentum=None, device=torch.device("cpu")):
-        self.sgc_momentum = sgc_momentum
+    def __init__(self, device=torch.device("cpu")):
+        # self.sgc_momentum = sgc_momentum
         self.momentums = None
         self.device = device
 
