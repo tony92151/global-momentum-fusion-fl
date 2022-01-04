@@ -48,7 +48,7 @@ class cifar_trainer(BASE_TRAINER):
             losses = sum(losses) / len(losses)
             eploss.append(losses)
 
-        self.last_gradient = optimizer.get_last_gradient(model=model)
+        self.last_gradient = optimizer.get_last_gradient(model=model, with_learning_rate=True)
         ############################################################
         train_loss = sum(eploss) / len(eploss)
         train_acc = correct / total_data
@@ -90,6 +90,9 @@ class cifar_trainer(BASE_TRAINER):
     def one_step_update(self, aggregated_gradient=None, lr=None):
         if aggregated_gradient["compressed"]:
             raise ValueError("In trainer.one_step_update(), input aggregated_gradient should be un-compressed.")
+
+        if lr is None:
+            lr = 1
 
         self.print_("trainer >> cid: {} >> one_step_update, {}".format(self.cid, time.time()))
         model = dcopy(self.model)
