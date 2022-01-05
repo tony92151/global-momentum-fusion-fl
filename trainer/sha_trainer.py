@@ -50,7 +50,7 @@ class sha_trainer(BASE_TRAINER):
             losses = sum(losses) / len(losses)
             eploss.append(losses)
 
-        self.last_gradient = optimizer.get_last_gradient(model=model, with_learning_rate=True)
+        self.last_gradient = optimizer.get_last_gradient(model=model, with_learning_rate=False)
         ############################################################
         train_loss = sum(eploss) / len(eploss)
         train_acc = correct / total_data
