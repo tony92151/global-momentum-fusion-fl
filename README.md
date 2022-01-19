@@ -23,10 +23,15 @@ test6    |  1.35
 
 ```shell=
 # usage
-In our experiment:
+In our cifar10 experiment:
 gpu=0 tbpath=./cifar10_repo_test compress_method="DGC" bash train_cifar10.sh
 gpu=0 tbpath=./cifar10_repo_test compress_method="GFDGC" bash train_cifar10.sh
 gpu=0 tbpath=./cifar10_repo_test compress_method="SGC" bash train_cifar10.sh
 gpu=0 tbpath=./cifar10_repo_test compress_method="GFGC" bash train_cifar10.sh
 
+In our shakespeare experiment:
+gpu=0 tbpath=./sha_repo_exp compress_method="DGC" bash train_sha.sh
+gpu=0 tbpath=./sha_repo_exp compress_method="GFDGC" bash train_sha.sh
+gpu=0 tbpath=./sha_repo_exp compress_method="SGC" bash train_sha.sh
+gpu=0 tbpath=./sha_repo_exp compress_method="GFGC" bash train_sha.sh
 ```
