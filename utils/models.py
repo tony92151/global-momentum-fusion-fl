@@ -33,7 +33,7 @@ class ResNet101_cifar(torchvision.models.resnet.ResNet):
 # These models inheritance from CifarResNet are a little bit different different from official one
 class ResNet20_cifar_gdc(CifarResNet):
     def __init__(self):
-        super(ResNet56_cifar_gdc, self).__init__(params=[(16, 3, 1), (32, 3, 2), (64, 3, 2)], num_classes=10)
+        super(ResNet20_cifar_gdc, self).__init__(params=[(16, 3, 1), (32, 3, 2), (64, 3, 2)], num_classes=10)
 
 
 class ResNet56_cifar_gdc(CifarResNet):
