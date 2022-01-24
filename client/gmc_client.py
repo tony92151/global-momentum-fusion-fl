@@ -49,6 +49,7 @@ class gmc_client(BASE_CLIENT):
         # compensate
         compensate_gradient = self.memory.compensate(gradient=self.trainer.last_gradient,
                                                      steps=self.step_count,
+                                                     num_clients=self.config.general.get_nodes(),
                                                      aggregated_gradient=self.last_aggregated_gradient)
 
         # compressed
