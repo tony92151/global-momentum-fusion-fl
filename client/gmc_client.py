@@ -19,7 +19,7 @@ class gmc_client(BASE_CLIENT):
         super(gmc_client, self).__init__(config=config, cid=cid, compressor=compressor,
                                          trainer=trainer, data=data, warmup_scheduler=warmup_scheduler,
                                          writer=writer, device=device)
-        self.memory = gmc_memory(gmc_momentum=self.config.gfdgc.get_momentum(),
+        self.memory = gmc_memory(gmc_momentum=self.config.gmc.get_momentum(),
                                  device=self.device,
                                  global_momentum_factor=1.0)
 
