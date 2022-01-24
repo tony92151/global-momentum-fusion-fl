@@ -107,7 +107,7 @@ class gmc_memory:
         # for k in copy_gradient['gradient'].keys():
         #     copy_gradient['gradient'][k].to(self.device)
 
-        if aggregated_gradient["gradient"] is None:
+        if aggregated_gradient is None:
             for k in copy_gradient['gradient'].keys():
                 copy_gradient['gradient'][k].mul_(1 / (num_clients * steps)).to(self.device)
         else:
