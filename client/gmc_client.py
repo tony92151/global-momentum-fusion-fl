@@ -128,7 +128,7 @@ class gmc_memory:
     def update(self, g_u_gradient=None, compressed_gradient=None):
         if not compressed_gradient["compressed"]:
             raise ValueError("DGC update expect input compressed gradient.")
-
+        self.u = {}
         for k in compressed_gradient['gradient'].keys():
             new_mem, ctx = compressed_gradient['gradient'][k]
             shape, mask, numel = ctx
