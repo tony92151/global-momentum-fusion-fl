@@ -25,9 +25,8 @@ class gmc_client(BASE_CLIENT):
 
         self.warmup_scheduler = warmup_scheduler
         self.compress_rate_scheduler = compress_rate_scheduler(max_iteration=config.trainer.get_max_iteration(),
-                                                               compress_rate_list=config.gfdgc.get_compress_rate())
-        self.fusion_ratio_scheduler = fusion_ratio_scheduler(max_iteration=config.trainer.get_max_iteration(),
-                                                             fusing_ratio_list=config.gfdgc.get_fusing_ratio())
+                                                               compress_rate_list=config.gmc.get_compress_rate())
+
         # global fusion
         self.last_aggregated_gradient = None
         self.global_gradient = None
@@ -87,9 +86,7 @@ class gmc_client(BASE_CLIENT):
         if self.cid == 0 and self.writer is not None:
             cr = self.compress_rate_scheduler.get_compress_rate_from_step(self.communication_round)
             lr = self.warmup_scheduler.get_lr_from_step(self.communication_round)
-            fr = self.fusion_ratio_scheduler.get_fusion_ratio_from_step(self.communication_round)
             self.writer.add_scalar("Compress rate", cr, global_step=self.communication_round, walltime=None)
-            self.writer.add_scalar("Fusion ratio", fr, global_step=self.communication_round, walltime=None)
             self.writer.add_scalar("Learning rate", lr, global_step=self.communication_round, walltime=None)
 
 
