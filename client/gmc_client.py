@@ -19,8 +19,9 @@ class gmc_client(BASE_CLIENT):
         super(gmc_client, self).__init__(config=config, cid=cid, compressor=compressor,
                                          trainer=trainer, data=data, warmup_scheduler=warmup_scheduler,
                                          writer=writer, device=device)
-        self.memory = dgc_memory(dgc_momentum=self.config.gfdgc.get_momentum(),
-                                 device=self.device)
+        self.memory = gmc_memory(gmc_momentum=self.config.gfdgc.get_momentum(),
+                                 device=self.device,
+                                 global_momentum_factor=1.0)
 
         self.warmup_scheduler = warmup_scheduler
         self.compress_rate_scheduler = compress_rate_scheduler(max_iteration=config.trainer.get_max_iteration(),
@@ -28,6 +29,7 @@ class gmc_client(BASE_CLIENT):
         self.fusion_ratio_scheduler = fusion_ratio_scheduler(max_iteration=config.trainer.get_max_iteration(),
                                                              fusing_ratio_list=config.gfdgc.get_fusing_ratio())
         # global fusion
+        self.last_aggregated_gradient = None
         self.global_gradient = None
         self.global_momentum = self.config.gfdgc.get_global_momentum()
 
@@ -46,18 +48,23 @@ class gmc_client(BASE_CLIENT):
                                    global_step=self.communication_round, walltime=None)
 
         # compensate
-        compensate_gradient = self.memory.compensate(self.trainer.last_gradient)
+        compensate_gradient = self.memory.compensate(gradient=self.trainer.last_gradient,
+                                                     steps=self.step_count,
+                                                     aggregated_gradient=self.last_aggregated_gradient)
+
+        g_u_gradient = dcopy(compensate_gradient)
+        for l in g_u_gradient["gradient"]:
+            g_u_gradient["gradient"][l].add_(self.memory.u["gradient"][l])
 
         # compressed
         self.compressor.set_compress_rate(
             self.compress_rate_scheduler.get_compress_rate_from_step(self.communication_round))
-        fusion_ratio = self.fusion_ratio_scheduler.get_fusion_ratio_from_step(self.communication_round)
-        # if global_gradient is None, it skip fusion technique and return  compressor.compress() result
-        compressed_compensate_gradient = self.compressor.compress(gradient_dict=compensate_gradient,
+
+        compressed_compensate_gradient = self.compressor.compress(gradient_dict=g_u_gradient,
                                                                   compress=True)
 
         # update
-        self.memory.update(compressed_compensate_gradient)
+        self.memory.update(g_u_gradient=g_u_gradient, compressed_gradient=compressed_compensate_gradient)
 
         compressed_compensate_gradient["step_count"] = self.step_count
         self.last_gradient = compressed_compensate_gradient
@@ -78,12 +85,7 @@ class gmc_client(BASE_CLIENT):
         lr = self.warmup_scheduler.get_lr_from_step(self.communication_round)
         self.trainer.one_step_update(aggregated_gradient=aggregated_gradient, lr=lr)
         # self.trainer.one_step_update(aggregated_gradient=aggregated_gradient)
-
-        if self.global_gradient is None:
-            self.global_gradient = aggregated_gradient
-        else:
-            for k in self.global_gradient['gradient'].keys():
-                self.global_gradient['gradient'][k].mul_(self.global_momentum).add_(aggregated_gradient['gradient'][k])
+        self.last_aggregated_gradient = aggregated_gradient
 
     def loginfo(self):
         if self.cid == 0 and self.writer is not None:
@@ -100,10 +102,10 @@ class gmc_memory:
         self.gmc_momentum = gmc_momentum
         self.global_momentum_factor = global_momentum_factor
         self.u = None
-        self.velocities = None
+        self.g = None
         self.device = device
 
-    def compensate(self, gradient, steps, num_clients, global_momentum, lr):
+    def compensate(self, gradient, steps, num_clients, aggregated_gradient):  # global_momentum = Wt - Wt-1 , (with LR)
         if gradient["compressed"]:
             raise ValueError("GMC compensate expect input un-compressed gradient.")
 
@@ -111,29 +113,32 @@ class gmc_memory:
         # for k in copy_gradient['gradient'].keys():
         #     copy_gradient['gradient'][k].to(self.device)
 
-        if global_momentum is None:
+        if aggregated_gradient["gradient"] is None:
             for k in copy_gradient['gradient'].keys():
                 copy_gradient['gradient'][k].mul_(1 / (num_clients * steps)).to(self.device)
         else:
             for k in copy_gradient['gradient'].keys():
                 copy_gradient['gradient'][k].mul_(1 / (steps * num_clients)).to(self.device).add_( \
-                    global_momentum[k].mul(self.global_momentum_factor / (num_clients * lr)), alpha=-1)
+                    aggregated_gradient["gradient"][k].mul(self.global_momentum_factor / num_clients), alpha=-1)
 
-        if self.u is not None:
-            for k in copy_gradient['gradient'].keys():
-                copy_gradient['gradient'][k].mul_(self.u[k]).to(self.device)
+        # else:
+        #     for k in copy_gradient['gradient'].keys():
+        #         copy_gradient['gradient'][k].mul_(1 / (steps * num_clients)).to(self.device).add_( \
+        #             aggregated_gradient["gradient"] [k].mul(self.global_momentum_factor / (num_clients * lr)), alpha=-1)
 
-        self.velocities = copy_gradient
-        return self.velocities
+        # if self.u is not None:
+        #     for k in copy_gradient['gradient'].keys():
+        #         copy_gradient['gradient'][k].mul_(self.u[k]).to(self.device)
 
-    def update(self, compressed_gradient=None):
+        self.g = copy_gradient
+        return self.g
+
+    def update(self, g_u_gradient=None, compressed_gradient=None):
         if not compressed_gradient["compressed"]:
             raise ValueError("DGC update expect input compressed gradient.")
-
-        self.u = dcopy(self.velocities)
 
         for k in compressed_gradient['gradient'].keys():
             new_mem, ctx = compressed_gradient['gradient'][k]
             shape, mask, numel = ctx
             indices, = torch.where(torch.BoolTensor(mask).to(self.device))
-            self.u[k] = dcopy(self.u["gradient"][k]).view(-1).index_fill_(0, indices, 0).view(shape).detach()
+            self.u[k] = dcopy(g_u_gradient["gradient"][k]).view(-1).index_fill_(0, indices, 0).view(shape).detach()
