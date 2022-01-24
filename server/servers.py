@@ -25,3 +25,7 @@ def get_server(con: Configer, device=torch.device("cpu")):
         return weight_server(config=con,
                              aggregater=weight_aggregater,
                              device=device)
+    elif con.compression.get_algorithm() == "gmc":
+        return weight_server(config=con,
+                             aggregater=weight_aggregater,
+                             device=device)
