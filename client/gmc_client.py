@@ -31,7 +31,7 @@ class gmc_client(BASE_CLIENT):
         # global fusion
         self.last_aggregated_gradient = None
         self.global_gradient = None
-        self.global_momentum = self.config.gfdgc.get_global_momentum()
+        # self.global_momentum = self.config.gmc.get_momentum()
 
     def train(self):
         self.loginfo()
