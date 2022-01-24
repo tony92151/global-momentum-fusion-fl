@@ -52,19 +52,15 @@ class gmc_client(BASE_CLIENT):
                                                      steps=self.step_count,
                                                      aggregated_gradient=self.last_aggregated_gradient)
 
-        g_u_gradient = dcopy(compensate_gradient)
-        for l in g_u_gradient["gradient"]:
-            g_u_gradient["gradient"][l].add_(self.memory.u["gradient"][l])
-
         # compressed
         self.compressor.set_compress_rate(
             self.compress_rate_scheduler.get_compress_rate_from_step(self.communication_round))
 
-        compressed_compensate_gradient = self.compressor.compress(gradient_dict=g_u_gradient,
+        compressed_compensate_gradient = self.compressor.compress(gradient_dict=compensate_gradient,
                                                                   compress=True)
 
         # update
-        self.memory.update(g_u_gradient=g_u_gradient, compressed_gradient=compressed_compensate_gradient)
+        self.memory.update(g_u_gradient=compensate_gradient, compressed_gradient=compressed_compensate_gradient)
 
         compressed_compensate_gradient["step_count"] = self.step_count
         self.last_gradient = compressed_compensate_gradient
@@ -118,20 +114,18 @@ class gmc_memory:
                 copy_gradient['gradient'][k].mul_(1 / (num_clients * steps)).to(self.device)
         else:
             for k in copy_gradient['gradient'].keys():
-                copy_gradient['gradient'][k].mul_(1 / (steps * num_clients)).to(self.device).add_( \
+                copy_gradient['gradient'][k].mul_(1 / (steps * num_clients)).to(self.device).add_(
                     aggregated_gradient["gradient"][k].mul(self.global_momentum_factor / num_clients), alpha=-1)
 
-        # else:
-        #     for k in copy_gradient['gradient'].keys():
-        #         copy_gradient['gradient'][k].mul_(1 / (steps * num_clients)).to(self.device).add_( \
-        #             aggregated_gradient["gradient"] [k].mul(self.global_momentum_factor / (num_clients * lr)), alpha=-1)
-
-        # if self.u is not None:
-        #     for k in copy_gradient['gradient'].keys():
-        #         copy_gradient['gradient'][k].mul_(self.u[k]).to(self.device)
-
         self.g = copy_gradient
-        return self.g
+
+        g_u_gradient = dcopy(copy_gradient)
+
+        if self.u is not None:
+            for layer in g_u_gradient["gradient"]:
+                g_u_gradient["gradient"][layer].add_(self.u["gradient"][layer])
+
+        return g_u_gradient
 
     def update(self, g_u_gradient=None, compressed_gradient=None):
         if not compressed_gradient["compressed"]:

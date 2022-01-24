@@ -3,9 +3,10 @@ from utils.compressor.dgc import config_dgc
 from utils.compressor.sgc import config_sgc
 from utils.compressor.gfdgc import config_gfdgc
 from utils.compressor.gfgc import config_gfgc
+from utils.compressor.gmc import config_gmc
 
 
-algo_we_provide = ["dgc", "sgc", "gfdgc", "gfgc"]
+algo_we_provide = ["dgc", "sgc", "gfdgc", "gfgc", "gmc"]
 
 
 class config_general:
@@ -155,3 +156,8 @@ class Configer:
                 self.gfgc = config_gfgc(self.config)
             except KeyError:
                 print("config read: skip sgc")
+        elif self.compression.get_algorithm() == "gmc":
+            try:
+                self.gmc = config_gmc(self.config)
+            except KeyError:
+                print("config read: skip gmc")
