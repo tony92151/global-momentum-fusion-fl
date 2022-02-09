@@ -110,6 +110,7 @@ python3 train.py \
 --tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.9 \
 --output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.9 \
 --gpu $gpu \
+--pool 5 \
 --seed $seed
 
 #python3 train.py \
