@@ -38,7 +38,9 @@ class dgc_client(BASE_CLIENT):
                                    walltime=None)
             self.writer.add_scalar("train_loss of {}".format(self.cid), train_loss,
                                    global_step=self.communication_round, walltime=None)
-
+        
+        self.set_train_result(acc=train_acc, loss=train_loss)
+        
         # compensate
         compensate_gradient = self.memory.compensate(self.trainer.last_gradient)
 
@@ -61,7 +63,8 @@ class dgc_client(BASE_CLIENT):
                                    walltime=None)
             self.writer.add_scalar("test_loss of {}".format(self.cid), test_loss, global_step=self.communication_round,
                                    walltime=None)
-
+        self.set_test_result(acc=test_acc, loss=test_loss)
+        
     def one_step_update(self, aggregated_gradient=None):
         if aggregated_gradient["compressed"]:
             aggregated_gradient = self.compressor.decompress(aggregated_gradient)

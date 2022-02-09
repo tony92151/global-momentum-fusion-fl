@@ -27,6 +27,8 @@ class BASE_CLIENT:
         self.warmup_scheduler = warmup_scheduler
         self.writer = writer
         self.device = device
+        self.train_result = None
+        self.test_result = None
 
         if self.cid is None:
             raise ValueError("client id not define.")
@@ -61,6 +63,7 @@ class BASE_CLIENT:
         if self.writer is not None:
             self.writer.add_scalar("global_test_acc", test_acc, global_step=self.communication_round, walltime=None)
             self.writer.add_scalar("global_test_loss", test_loss, global_step=self.communication_round, walltime=None)
+        self.set_test_result(acc=test_acc, loss=test_loss)
         return test_acc, test_loss
 
     def set_model(self, model):
@@ -71,3 +74,9 @@ class BASE_CLIENT:
 
     def one_step_update(self, aggregated_gradient=None):
         raise NotImplementedError()
+    
+    def set_train_result(self, acc="", loss=""):
+        self.train_result = {"acc":acc, "loss":loss}
+
+    def set_test_result(self, acc="", loss=""):
+        self.test_result = {"acc":acc, "loss":loss}
