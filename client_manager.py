@@ -26,6 +26,9 @@ class client_manager:
         self.executor = executor
         self.available_gpu = available_gpu
 
+        self.train_result = None
+        self.test_result = None
+
         self.clients = []
         self.server = get_server(con=self.config)
 
@@ -95,6 +98,7 @@ class client_manager:
             client.set_communication_round(communication_round)
 
     def train(self):
+        self.train_result = {}
         trained_gradients = []
         if self.executor is not None:
             futures = []
@@ -108,9 +112,9 @@ class client_manager:
                 pass
             del futures
 
-            for client in self.clients:
-                if client.cid in self.sampled_client_id:
-                    trained_gradients.append(client.get_gradient())
+            # for client in self.clients:
+            #     if client.cid in self.sampled_client_id:
+            #         trained_gradients.append(client.get_gradient())
         else:
             for client in self.clients:
                 if client.cid in self.sampled_client_id:
@@ -118,14 +122,20 @@ class client_manager:
                 else:
                     client.test()
 
-            for client in self.clients:
-                if client.cid in self.sampled_client_id:
-                    trained_gradients.append(client.get_gradient())
+            # for client in self.clients:
+            #     if client.cid in self.sampled_client_id:
+            #         trained_gradients.append(client.get_gradient())
+        for client in self.clients:
+            if client.cid in self.sampled_client_id:
+                trained_gradients.append(client.get_gradient())
+                self.train_result[client.cid] = client.train_result
 
         return trained_gradients
 
     def global_test(self):
+        self.test_result = {}
         test_acc, test_loss = self.clients[0].global_test()
+        self.test_result = self.clients[0].test_result
         return test_acc, test_loss
 
     def one_step_update(self, aggregated_gradient):

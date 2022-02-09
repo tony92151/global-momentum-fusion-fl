@@ -114,6 +114,8 @@ if __name__ == '__main__':
 
     client_smapled_count = [0 for i in range(config.general.get_nodes())]
 
+    logname = logdir.split("/")[-1]
+    record = {logname:{"train":{}, "test":{}, "final":{}}}
     # train
     print("\nStart training...")
     for communication_round in tqdm(range(config.trainer.get_max_iteration())):
@@ -145,13 +147,12 @@ if __name__ == '__main__':
         traffic += parameter_count(aggregated_gradient) * config.general.get_nodes()
 
         # one step update
-        test_acc, test_loss = client_manager.global_test()
-        print("Test acc: {}, loss: {}".format(test_acc, test_loss))
         client_manager.one_step_update(aggregated_gradient=aggregated_gradient)
         one_step_done_time = time.time()
         ####################################################################################################
 
         test_acc, test_loss = client_manager.global_test()
+        print("Test acc: {}, loss: {}".format(test_acc, test_loss))
         global_test_done_time = time.time()
         # writer.add_scalar("test loss", test_loss, global_step=communication_round, walltime=None)
         # writer.add_scalar("test acc", test_acc, global_step=communication_round, walltime=None)
@@ -170,31 +171,21 @@ if __name__ == '__main__':
         for cid in sampled_client_id:
             client_smapled_count[cid] += 1
 
+        record[logname]["train"][communication_round] = client_manager.train_result
+        record[logname]["test"][communication_round] = client_manager.test_result
+
     print(client_smapled_count)
 
     if not num_pool == -1:
         executor.shutdown(True)
 
     # save result
-    result_path = os.path.join(out_path, "result.json")
-    if not os.path.isfile(result_path):
-        f = open(result_path, 'w')
-        json.dump({}, f)
-        f.close()
-
-    file_ = open(result_path, 'r')
-    context = json.load(file_)
-    file_.close()
-
-    name = logdir.split("/")[-1]
-    if name not in context.keys():
-        context[name] = [{"test_acc": test_acc, "test loss": test_loss, "client_smapled_count": client_smapled_count}]
-    else:
-        context[name].append(
-            {"test_acc": test_acc, "test loss": test_loss, "client_smapled_count": client_smapled_count})
+    result_path = os.path.join(out_path, "result_{}.json".format(int(time.time())))
+    
+    record[logname]["final"] = {"test_acc": test_acc, "test loss": test_loss, "client_smapled_count": client_smapled_count}
 
     f = open(result_path, 'w')
-    json.dump(context, f, indent=4)
+    json.dump(record, f, indent=4)
     f.close()
 
     time.sleep(5)
