@@ -4,7 +4,7 @@ from server.base_server import BASE_SERVER
 from server.weight_server import weight_server
 from server.momentum_server import momentum_server
 from utils.configer import Configer
-from server.aggregater import weight_aggregater
+from server.aggregater import weight_aggregater, add_aggregater
 
 
 def get_server(con: Configer, device=torch.device("cpu")):
@@ -27,5 +27,5 @@ def get_server(con: Configer, device=torch.device("cpu")):
                              device=device)
     elif con.compression.get_algorithm() == "gmc":
         return weight_server(config=con,
-                             aggregater=weight_aggregater,
+                             aggregater=add_aggregater,
                              device=device)

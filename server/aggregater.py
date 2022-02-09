@@ -5,7 +5,6 @@ from copy import deepcopy as dcopy
 import torch
 
 
-
 def add_mean_var(means=None, vrs=None, tracks=None):
     if (type(means) is not list) or (type(means) is not list) or (type(means) is not list):
         raise ValueError("means should be list.")
@@ -48,5 +47,21 @@ def weight_aggregater(gradient_list, device=torch.device("cpu")):
             torch.stack([g["gradient"][k].mul_(g["step_count"]).to(device) for g in gradient_list]),
             dim=0)
         new_gradient_list["gradient"][k] = result.mul_(1.0 / all_steps)
+
+    return [new_gradient_list]
+
+
+def add_aggregater(gradient_list, device=torch.device("cpu")):
+    for g in gradient_list:
+        if g['compressed']:
+            raise ValueError("gradient should be decompress before aggregate.")
+
+    new_gradient_list = dcopy(gradient_list[0])
+    for k in new_gradient_list['gradient'].keys():
+        new_gradient_list['gradient'][k] = None
+
+    for k in gradient_list[0]["gradient"].keys():
+        result = torch.sum(torch.stack([g["gradient"][k].to(device) for g in gradient_list]), dim=0)
+        new_gradient_list["gradient"][k] = result
 
     return [new_gradient_list]
