@@ -20,8 +20,7 @@ class gmc_client(BASE_CLIENT):
                                          trainer=trainer, data=data, warmup_scheduler=warmup_scheduler,
                                          writer=writer, device=device)
         self.memory = gmc_memory(gmc_momentum=self.config.gmc.get_momentum(),
-                                 device=self.device,
-                                 global_momentum_factor=1.0)
+                                 device=self.device)
 
         self.warmup_scheduler = warmup_scheduler
         self.compress_rate_scheduler = compress_rate_scheduler(max_iteration=config.trainer.get_max_iteration(),
@@ -51,7 +50,7 @@ class gmc_client(BASE_CLIENT):
                                                      steps=self.step_count,
                                                      num_clients=self.config.general.get_nodes(),
                                                      aggregated_gradient=self.last_aggregated_gradient)
-
+        copy_compensate_gradient = dcopy(compensate_gradient)
         # compressed
         self.compressor.set_compress_rate(
             self.compress_rate_scheduler.get_compress_rate_from_step(self.communication_round))
@@ -60,7 +59,7 @@ class gmc_client(BASE_CLIENT):
                                                                   compress=True)
 
         # update
-        self.memory.update(g_u_gradient=compensate_gradient, compressed_gradient=compressed_compensate_gradient)
+        self.memory.update(g_u_gradient=copy_compensate_gradient, compressed_gradient=compressed_compensate_gradient)
 
         compressed_compensate_gradient["step_count"] = self.step_count
         self.last_gradient = compressed_compensate_gradient
@@ -92,9 +91,8 @@ class gmc_client(BASE_CLIENT):
 
 
 class gmc_memory:
-    def __init__(self, gmc_momentum=None, device=torch.device("cpu"), global_momentum_factor=0.9):
+    def __init__(self, gmc_momentum=None, device=torch.device("cpu")):
         self.gmc_momentum = gmc_momentum
-        self.global_momentum_factor = global_momentum_factor
         self.u = None
         self.g = None
         self.device = device
@@ -112,8 +110,8 @@ class gmc_memory:
                 copy_gradient['gradient'][k].mul_(1 / (num_clients * steps)).to(self.device)
         else:
             for k in copy_gradient['gradient'].keys():
-                copy_gradient['gradient'][k].mul_(1 / (steps * num_clients)).to(self.device).add_(
-                    aggregated_gradient["gradient"][k].mul(self.global_momentum_factor / num_clients), alpha=-1)
+                copy_gradient['gradient'][k].mul_(1 / (num_clients * steps)).to(self.device).add_(
+                    aggregated_gradient["gradient"][k].mul(self.gmc_momentum / num_clients).to(self.device), alpha=1)
 
         self.g = copy_gradient
 
@@ -128,9 +126,9 @@ class gmc_memory:
     def update(self, g_u_gradient=None, compressed_gradient=None):
         if not compressed_gradient["compressed"]:
             raise ValueError("DGC update expect input compressed gradient.")
-        self.u = {}
+        self.u = {"gradient":{}}
         for k in compressed_gradient['gradient'].keys():
             new_mem, ctx = compressed_gradient['gradient'][k]
             shape, mask, numel = ctx
             indices, = torch.where(torch.BoolTensor(mask).to(self.device))
-            self.u[k] = dcopy(g_u_gradient["gradient"][k]).view(-1).index_fill_(0, indices, 0).view(shape).detach()
+            self.u["gradient"][k] = dcopy(g_u_gradient["gradient"][k]).view(-1).index_fill_(0, indices, 0).view(shape).detach()
