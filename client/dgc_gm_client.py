@@ -11,12 +11,12 @@ from utils.configer import Configer
 from sparse_compressor.scheduler import warmup_scheduler, compress_rate_scheduler, fusion_ratio_scheduler
 
 
-class dgc_client(BASE_CLIENT):
+class dgc_gm_client(BASE_CLIENT):
     def __init__(self, config: Configer, cid=None, compressor=None, trainer=None,
                  data=None, warmup_scheduler=None, writer=None, device=torch.device("cpu")):
-        super(dgc_client, self).__init__(config=config, cid=cid, compressor=compressor,
-                                         trainer=trainer, data=data, warmup_scheduler=warmup_scheduler,
-                                         writer=writer, device=device)
+        super(dgc_gm_client, self).__init__(config=config, cid=cid, compressor=compressor,
+                                            trainer=trainer, data=data, warmup_scheduler=warmup_scheduler,
+                                            writer=writer, device=device)
         self.memory = dgc_memory(dgc_momentum=self.config.dgc_gm.get_momentum(),
                                  device=self.device)
 
