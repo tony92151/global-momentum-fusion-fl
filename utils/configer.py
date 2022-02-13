@@ -7,7 +7,7 @@ from utils.compressor.gmc import config_gmc
 from utils.compressor.dgc_gm import config_dgc_gm
 
 
-algo_we_provide = ["dgc", "sgc", "gfdgc", "gfgc", "gmc"]
+algo_we_provide = ["dgc", "sgc", "gfdgc", "gfgc", "gmc", "dgc_gm"]
 
 
 class config_general:
