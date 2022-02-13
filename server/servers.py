@@ -29,3 +29,8 @@ def get_server(con: Configer, device=torch.device("cpu")):
         return weight_server(config=con,
                              aggregater=add_aggregater,
                              device=device)
+    elif con.compression.get_algorithm() == "dgc_gm":
+        return momentum_server(config=con,
+                               server_momentun=con.dgc_gm.get_server_momentum(),
+                               aggregater=weight_aggregater,
+                               device=device)
