@@ -113,11 +113,12 @@ python3 train.py \
 --pool 5 \
 --seed $seed
 
-#python3 train.py \
-#--config ./configs/cifar10/$compress_method/config_10.ini \
-#--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr1.0 \
-#--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr1.0 \
-#--gpu $gpu \
-#--seed $seed
+# python3 train.py \
+# --config ./configs/cifar10/$compress_method/config_10.ini \
+# --tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr1.0 \
+# --output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr1.0 \
+# --gpu $gpu \
+# --pool 5 \
+# --seed $seed
 
 done

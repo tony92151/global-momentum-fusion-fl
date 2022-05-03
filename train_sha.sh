@@ -34,19 +34,19 @@ echo "seed : $seed"
 
 python3 train.py \
 --config ./configs/shakespeare/$compress_method/config_1.ini \
---tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr1.0 \
---output ./"$tbpath"/sha_1l_"$compress_method"_cr1.0 \
+--tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.1 \
+--output ./"$tbpath"/sha_1l_"$compress_method"_cr0.1 \
 --gpu $gpu \
 --pool 5 \
 --seed $seed
 
-# python3 train.py \
-# --config ./configs/shakespeare/$compress_method/config_2.ini \
-# --tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.2 \
-# --output ./"$tbpath"/sha_1l_"$compress_method"_cr0.2 \
-# --gpu $gpu \
-# --pool 5 \
-# --seed $seed
+# # python3 train.py \
+# # --config ./configs/shakespeare/$compress_method/config_2.ini \
+# # --tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.2 \
+# # --output ./"$tbpath"/sha_1l_"$compress_method"_cr0.2 \
+# # --gpu $gpu \
+# # --pool 5 \
+# # --seed $seed
 
 python3 train.py \
 --config ./configs/shakespeare/$compress_method/config_3.ini \
@@ -56,13 +56,13 @@ python3 train.py \
 --pool 5 \
 --seed $seed
 
-# python3 train.py \
-# --config ./configs/shakespeare/$compress_method/config_4.ini \
-# --tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.4 \
-# --output ./"$tbpath"/sha_1l_"$compress_method"_cr0.4 \
-# --gpu $gpu \
-# --pool 5 \
-# --seed $seed
+# # python3 train.py \
+# # --config ./configs/shakespeare/$compress_method/config_4.ini \
+# # --tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.4 \
+# # --output ./"$tbpath"/sha_1l_"$compress_method"_cr0.4 \
+# # --gpu $gpu \
+# # --pool 5 \
+# # --seed $seed
 
 python3 train.py \
 --config ./configs/shakespeare/$compress_method/config_5.ini \
@@ -72,13 +72,13 @@ python3 train.py \
 --pool 5 \
 --seed $seed
 
-# python3 train.py \
-# --config ./configs/shakespeare/$compress_method/config_6.ini \
-# --tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.6 \
-# --output ./"$tbpath"/sha_1l_"$compress_method"_cr0.6 \
-# --gpu $gpu \
-# --pool 5 \
-# --seed $seed
+# # python3 train.py \
+# # --config ./configs/shakespeare/$compress_method/config_6.ini \
+# # --tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.6 \
+# # --output ./"$tbpath"/sha_1l_"$compress_method"_cr0.6 \
+# # --gpu $gpu \
+# # --pool 5 \
+# # --seed $seed
 
 python3 train.py \
 --config ./configs/shakespeare/$compress_method/config_7.ini \
@@ -88,13 +88,13 @@ python3 train.py \
 --pool 5 \
 --seed $seed
 
-# python3 train.py \
-# --config ./configs/shakespeare/$compress_method/config_8.ini \
-# --tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.8 \
-# --output ./"$tbpath"/sha_1l_"$compress_method"_cr0.8 \
-# --gpu $gpu \
-# --pool 5 \
-# --seed $seed
+# # python3 train.py \
+# # --config ./configs/shakespeare/$compress_method/config_8.ini \
+# # --tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr0.8 \
+# # --output ./"$tbpath"/sha_1l_"$compress_method"_cr0.8 \
+# # --gpu $gpu \
+# # --pool 5 \
+# # --seed $seed
 
 python3 train.py \
 --config ./configs/shakespeare/$compress_method/config_9.ini \
@@ -104,10 +104,10 @@ python3 train.py \
 --pool 5 \
 --seed $seed
 
-# python3 train.py \
-# --config ./configs/shakespeare/$compress_method/config_10.ini \
-# --tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr1.0 \
-# --output ./"$tbpath"/sha_1l_"$compress_method"_cr1.0 \
-# --gpu $gpu \
-# --pool 5 \
-# --seed $seed
+# # python3 train.py \
+# # --config ./configs/shakespeare/$compress_method/config_10.ini \
+# # --tensorboard_path ./"$tbpath"/sha_1l_"$compress_method"_cr1.0 \
+# # --output ./"$tbpath"/sha_1l_"$compress_method"_cr1.0 \
+# # --gpu $gpu \
+# # --pool 5 \
+# # --seed $seed
