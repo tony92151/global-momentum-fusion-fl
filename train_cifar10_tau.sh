@@ -22,7 +22,7 @@ fi
 
 if [ -z "seed" ]
 then
-  seed=123
+  seed="123"
 fi
 
 
@@ -34,22 +34,22 @@ echo "seed : $seed"
 
 
 # for (( i = 0; i < 7; i++ ))
-for (( i = 6; i >= 0; i-- ))
-do
+# for (( i = 6; i >= 0; i-- ))
+# do
 
-# export i=6
+export i=6
 export index_path="./data/cifar10/test$i/index.json"
 
-for (( t = 1; t <= 10; i++ ))
-do
-
-python3 train.py \
+# for (( t = 1; t <= 1; i++ ))
+# do
+t=1
+python3 train_tau_tuning.py \
 --config ./configs/cifar10/GFDGC_tau_exp/t"$t"/config_1.ini \
---tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.1_t"$t" \
+--tensorboard_path ./"$tbpath" \
 --output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.1_t"$t" \
 --gpu $gpu \
 --pool 5 \
---seed $seed
+--seed 123
 
 #python3 train.py \
 #--config ./configs/cifar10/GFDGC_tau_exp/t"$t"/config_3.ini \
@@ -67,7 +67,7 @@ python3 train.py \
 #--pool 5 \
 #--seed $seed
 
-done
+# done
 
 
-done
+# done

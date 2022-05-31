@@ -61,7 +61,7 @@ def init_regular_training(config, logdir, executor, seed):
                         available_gpu=gpus)
 
     set_seed(seed + 1)
-    net = client_manager.set_init_mdoel()
+    net = cm.set_init_mdoel()
 
     # init traffic simulator (count number of parameters of transmitted gradient)
     traffic = 0
@@ -73,28 +73,28 @@ def init_regular_training(config, logdir, executor, seed):
     return cm, traffic, record
 
 
-def regular_training(client_manager, communication_round, traffic, record):
-    client_manager.set_communication_round(communication_round=communication_round)
+def regular_training(cm, communication_round, traffic, record):
+    cm.set_communication_round(communication_round=communication_round)
     # seed
     set_seed(args.seed + communication_round)
     # sample trainer
-    sampled_client_id = client_manager.sample_client()
+    sampled_client_id = cm.sample_client()
     # sample dataset
-    client_manager.sample_data()
+    cm.sample_data()
     ####################################################################################################
-    trained_gradients = client_manager.train()
+    trained_gradients = cm.train()
     # clients transmit to server
     traffic += sum([parameter_count(g) for g in trained_gradients])
     # aggregate
-    aggregated_gradient = client_manager.aggregate(trained_gradients=trained_gradients)
+    aggregated_gradient = cm.aggregate(trained_gradients=trained_gradients)
     # server transmit to clients
     traffic += parameter_count(aggregated_gradient) * config.general.get_nodes()
     # one step update
-    client_manager.one_step_update(aggregated_gradient=aggregated_gradient)
+    cm.one_step_update(aggregated_gradient=aggregated_gradient)
     one_step_done_time = time.time()
     ####################################################################################################
 
-    test_acc, test_loss = client_manager.global_test()
+    test_acc, test_loss = cm.global_test()
     print("Test acc: {}, loss: {}".format(test_acc, test_loss))
     global_test_done_time = time.time()
 
@@ -166,38 +166,46 @@ if __name__ == '__main__':
         #### Regular training ####
 
         # step1: init new client_manager, communication_round, traffic and record
-        logdir = os.path.join(args.tensorboard_path, "DQN_round_{}_of_{}_regular")
-        client_manager, traffic, record = init_regular_training(config,
-                                                                logdir,
-                                                                executor,
-                                                                int(time.time() * 1000) % 1000)
+        logdir = os.path.join(args.tensorboard_path, "DQN_round_{}_of_{}_regular".format(di, dqn_round))
+        cm, traffic, record = init_regular_training(config,
+                                                    logdir,
+                                                    executor,
+                                                    int(time.time() * 1000) % 1000)
+        # cache = {
+        #     "client_manager": client_manager.clients,
+        #     "communication_round": 1,
+        #     "traffic": traffic,
+        #     "record": record,
+        # }
+        # os.makedirs("./agent_cache", exist_ok=True)
+        # torch.save(cache, os.path.join("./agent_cache",  "DQN_round_{}_of_{}_regular".format(di, dqn_round)))
         for communication_round in tqdm(range(0, config.trainer.get_max_iteration())):
             # overwrite fusion_ratio_scheduler
             qvalue = 1  # agent.getQvalue()
-            for c in client_manager.clients:
+            for c in cm.clients:
                 c.fusion_ratio_scheduler = fusion_ratio_scheduler(1, [qvalue])
 
-            traffic = regular_training(client_manager, communication_round, traffic, record)
+            #traffic = regular_training(cm, communication_round, traffic, record)
 
             if communication_round % 10 == 0 and communication_round != 0:
                 # agent append memory
                 pass
 
-        print("=" * 10, " DQN round ({}/{}) : Cache training ".format(di, dqn_round), "=" * 10)
-        #### Cache training ####
+        # print("=" * 10, " DQN round ({}/{}) : Cache training ".format(di, dqn_round), "=" * 10)
+        # #### Cache training ####
         # step1 : random select a cache in cache_queue
-        cache = {
-            "client_manager": None,
-            "communication_round": None,
-            "traffic": None,
-            "record": None,
-        }
+        # cache = {
+        #     "cm": None,
+        #     "communication_round": None,
+        #     "traffic": None,
+        #     "record": None,
+        # }
 
-        # step2 : Resume
-        client_manager = cache["client_manager"]
-        last_client_manager = cache["communication_round"]
-        last_traffic = cache["traffic"]
-        last_record = cache["record"]
+        # # step2 : Resume
+        # cm = cache["cm"]
+        # last_cm = cache["communication_round"]
+        # last_traffic = cache["traffic"]
+        # last_record = cache["record"]
 
     if not num_pool == -1:
         executor.shutdown(True)
