@@ -17,6 +17,8 @@ from client_manager import client_manager
 from utils.parameter_counter import parameter_count
 from sparse_compressor.scheduler import fusion_ratio_scheduler
 
+from dqn.agent import ReinforceAgent
+from dqn.fl_env import fl_env
 
 def set_seed(seed):
     torch.manual_seed(seed)
@@ -45,66 +47,6 @@ def init_writer(tbpath, name_prefix=""):
 #         writer.add_scalar("Fusion ratio", fr, global_step=epoch, walltime=None)
 #     writer.add_scalar("Learning rate", lr, global_step=epoch, walltime=None)
 
-def init_regular_training(config, logdir, executor, seed):
-    writer = init_writer(tbpath=os.path.abspath(logdir), name_prefix=args.name_prefix)
-
-    w_scheduler = warmup_scheduler(start_lr=config.trainer.get_start_lr(),
-                                   max_lr=config.trainer.get_max_lr(),
-                                   min_lr=config.trainer.get_min_lr(),
-                                   base_step=config.trainer.get_base_step(),
-                                   end_step=config.trainer.get_end_step())
-
-    cm = client_manager(config=config,
-                        warmup_scheduler=w_scheduler,
-                        writer=writer,
-                        executor=executor,
-                        available_gpu=gpus)
-
-    set_seed(seed + 1)
-    net = cm.set_init_mdoel()
-
-    # init traffic simulator (count number of parameters of transmitted gradient)
-    traffic = 0
-    traffic += (parameter_count(net) * config.general.get_nodes())  # clients download
-
-    logname = logdir.split("/")[-1]
-    record = {logname: {"train": {}, "test": {}, "final": {}}}
-
-    return cm, traffic, record
-
-
-def regular_training(cm, communication_round, traffic, record):
-    cm.set_communication_round(communication_round=communication_round)
-    # seed
-    set_seed(args.seed + communication_round)
-    # sample trainer
-    sampled_client_id = cm.sample_client()
-    # sample dataset
-    cm.sample_data()
-    ####################################################################################################
-    trained_gradients = cm.train()
-    # clients transmit to server
-    traffic += sum([parameter_count(g) for g in trained_gradients])
-    # aggregate
-    aggregated_gradient = cm.aggregate(trained_gradients=trained_gradients)
-    # server transmit to clients
-    traffic += parameter_count(aggregated_gradient) * config.general.get_nodes()
-    # one step update
-    cm.one_step_update(aggregated_gradient=aggregated_gradient)
-    one_step_done_time = time.time()
-    ####################################################################################################
-
-    test_acc, test_loss = cm.global_test()
-    print("Test acc: {}, loss: {}".format(test_acc, test_loss))
-    global_test_done_time = time.time()
-
-    # for cid in sampled_client_id:
-    #     client_sampled_count[cid] += 1
-
-    # record[logname]["train"][communication_round] = client_manager.train_result
-    # record[logname]["test"][communication_round] = client_manager.test_result
-
-    return traffic
 
 
 if __name__ == '__main__':
@@ -153,43 +95,41 @@ if __name__ == '__main__':
 
     logdir = args.tensorboard_path if args.tensorboard_path is not None else config.general.get_logdir()
 
+    env = fl_env(config=config, record_batch=5)
+
     # train
     print("\nStart training...")
 
     ########
     # DQN
     ########
-    # agent = ReinforceAgent(root="./agent_cache")
+    agent = ReinforceAgent("./agent_cache", 2, 21)
 
     for di in range(dqn_round):
         print("=" * 10, " DQN round ({}/{}) : Regular training ".format(di, dqn_round), "=" * 10)
         #### Regular training ####
 
-        # step1: init new client_manager, communication_round, traffic and record
+        # step1: init env
         logdir = os.path.join(args.tensorboard_path, "DQN_round_{}_of_{}_regular".format(di, dqn_round))
-        cm, traffic, record = init_regular_training(config,
-                                                    logdir,
-                                                    executor,
-                                                    int(time.time() * 1000) % 1000)
-        # cache = {
-        #     "client_manager": client_manager.clients,
-        #     "communication_round": 1,
-        #     "traffic": traffic,
-        #     "record": record,
-        # }
-        # os.makedirs("./agent_cache", exist_ok=True)
+        state = env.reset(writer=None, executor=executor, gpus=gpus)
+
         # torch.save(cache, os.path.join("./agent_cache",  "DQN_round_{}_of_{}_regular".format(di, dqn_round)))
-        for communication_round in tqdm(range(0, config.trainer.get_max_iteration())):
-            # overwrite fusion_ratio_scheduler
-            qvalue = 1  # agent.getQvalue()
-            for c in cm.clients:
-                c.fusion_ratio_scheduler = fusion_ratio_scheduler(1, [qvalue])
+        done = False
 
-            #traffic = regular_training(cm, communication_round, traffic, record)
+        while not done:
+            action = agent.getAction(state)
+            next_state, reward, done = env.step(action)
+            agent.appendMemory(state=state,
+                               action=action,
+                               reward=reward,
+                               next_state=next_state,
+                               done=done)
 
-            if communication_round % 10 == 0 and communication_round != 0:
-                # agent append memory
-                pass
+            agent.trainModel()
+
+        agent.updateTargetModel()
+
+
 
         # print("=" * 10, " DQN round ({}/{}) : Cache training ".format(di, dqn_round), "=" * 10)
         # #### Cache training ####

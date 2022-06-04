@@ -7,7 +7,7 @@ class DQN(torch.nn.Module):
         self.Relu1 = torch.nn.ReLU()
         self.Linear2 = torch.nn.Linear(state_size*2, action_size)
         self.Dropout1 = torch.nn.Dropout()
-        self.Linear3 = torch.nn.Linear(state_size, action_size)
+        self.Linear3 = torch.nn.Linear(action_size, action_size)
 
     def forward(self, vlaue):
         out = self.Linear1(vlaue)
