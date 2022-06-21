@@ -1,5 +1,6 @@
 from trainer.cifar_trainer import cifar_trainer
 from trainer.sha_trainer import sha_trainer
+from trainer.mnist_trainer import mnist_trainer
 from utils.configer import Configer
 
 
@@ -8,3 +9,5 @@ def get_trainer(con: Configer):
         return cifar_trainer
     elif con.trainer.get_dataset() == "shakespeare":
         return sha_trainer
+    elif con.trainer.get_dataset() == "mnist":
+        return mnist_trainer

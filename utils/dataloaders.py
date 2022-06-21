@@ -99,6 +99,53 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
             "test_s": None
             }
 
+def mnist_dataloaders(root="./data/mnist", index_path="./mnist/test0/index.json", batch_size=128, show=True):
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        # transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+    trainset = torchvision.datasets.MNIST(root=root, train=True, download=True, transform=transform_train)
+
+    testset = torchvision.datasets.MNIST(root=root, train=False, download=True, transform=transform_train)
+    ################################################################################################
+    file_ = open(index_path, 'r')
+    context = json.load(file_)
+    file_.close()
+
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
+
+    trainloaders = []
+    for i in range(len(context.keys())):
+        trainloaders.append(torch.utils.data.DataLoader(trainset,
+                                                        batch_size=batch_size,
+                                                        sampler=SubsetSampler(context[str(i)])))
+
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
+    if show:
+        for j in range(len(context.keys())):
+            ans = [0 for i in range(10)]
+            for i in context[str(j)]:
+                ans[trainset.targets[i]] += 1
+            print("client: {} , {}, sum: {}".format(j, ans, sum(ans)))
+
+    # test: single loader
+    # train: single loader
+    # train_s: loaders
+    # test_s: loaders
+    # train_s_iid: loaders with iid data
+    return {"test": testloader,
+            "train": trainloader,
+            "train_s": trainloaders,
+            "test_s": None
+            }
+
 
 class MNISTDataset(Dataset):
     """EMNIST dataset"""
@@ -250,14 +297,13 @@ def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     for u in train_data["users"]:
         train_data["user_data"][u]['x']
         x = [word_to_indices(sen) for sen in train_data["user_data"][u]['x']]
-        x = x[:int(len(x)/batch_size)*batch_size]
+        x = x[:int(len(x) / batch_size) * batch_size]
 
         y = [word_to_indices(sen)[0] for sen in train_data["user_data"][u]['y']]
         y = y[:int(len(y) / batch_size) * batch_size]
 
         traloader = torch.utils.data.DataLoader(SHDataset(x, y), batch_size=batch_size, shuffle=True)
         trainloaders.append(traloader)
-
 
     # for i in train_data["users"]:
     #     # cut data to fit batch
@@ -332,7 +378,7 @@ def shakespeare_dataloaders(root="./data/femnist", batch_size=128, clients=10):
     print("Test total:", test_total)
 
     return {"test": testloader, "train_s": trainloaders,
-            "test_s":None}
+            "test_s": None}
 
 
 def word_to_indices(word):
@@ -365,6 +411,10 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
         dataloaders = shakespeare_dataloaders(root=config.trainer.get_dataset_path(),
                                               batch_size=config.trainer.get_local_bs(),
                                               clients=config.general.get_nodes())
+    elif "mnist" in config.trainer.get_dataset_path():
+        dataloaders = mnist_dataloaders(root=config.trainer.get_dataset_path(),
+                                        batch_size=config.trainer.get_local_bs(),
+                                        clients=config.general.get_nodes())
 
     if emd_measurement:
         number_of_class = 0
@@ -376,7 +426,7 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
             number_of_class = 80
         emd = earth_moving_distance(dataloaders=dataloaders["train_s"], number_of_class=number_of_class)
 
-    #print("\nTotal train data: {}".format(len(dataloaders["train"].dataset)))
+    # print("\nTotal train data: {}".format(len(dataloaders["train"].dataset)))
     print("Total test data: {}".format(len(dataloaders["test"].dataset)))
     return dataloaders, emd
 
@@ -384,4 +434,3 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
 # dataloader statistics
 def data_statistics():
     pass
-

@@ -109,6 +109,14 @@ class Net_cifar(nn.Module):
         x = self.fc3(x)
         return x
 
+##########################################################################################
+class ResNet9_mnist(torchvision.models.resnet.ResNet):
+    def __init__(self):
+        super(ResNet9_mnist, self).__init__(block=torchvision.models.resnet.BasicBlock,
+                                            layers=[1, 1, 1, 1],
+                                            num_classes=10)
+        self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=1, padding=3, bias=False)
+##########################################################################################
 
 class Net_femnist(nn.Module):
     def __init__(self):
@@ -184,6 +192,7 @@ MODELS_TABLE = {
     # for shakespeare
     "lstm_shakespeare_1L": LSTM_shakespeare_1L,
     "lstm_shakespeare_2L": LSTM_shakespeare_2L,
+    "mnist": ResNet9_mnist,
 }
 
 
