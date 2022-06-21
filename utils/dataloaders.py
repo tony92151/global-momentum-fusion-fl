@@ -413,12 +413,14 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
                                               clients=config.general.get_nodes())
     elif "mnist" in config.trainer.get_dataset_path():
         dataloaders = mnist_dataloaders(root=config.trainer.get_dataset_path(),
-                                        batch_size=config.trainer.get_local_bs(),
-                                        clients=config.general.get_nodes())
+                                        index_path=os.getenv('index_path', config.trainer.get_dataset_path()),
+                                        batch_size=config.trainer.get_local_bs())
 
     if emd_measurement:
         number_of_class = 0
         if "cifar10" in config.trainer.get_dataset_path():
+            number_of_class = 10
+        elif "mnist" in config.trainer.get_dataset_path():
             number_of_class = 10
         elif "femnist" in config.trainer.get_dataset_path():
             number_of_class = 62
