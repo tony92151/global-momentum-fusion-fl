@@ -34,8 +34,8 @@ class ReinforceAgent:
         self.batch_size = 10
 
         # if len of memory > self.train_start, star training
-        self.train_start = 30
-        self.memory = deque(maxlen=1000)
+        self.train_start = 20
+        self.memory = deque(maxlen=5000)
         self.model = self.buildModel()
         self.target_model = copy.deepcopy(self.model)
         # self.updateTargetModel()
@@ -49,6 +49,7 @@ class ReinforceAgent:
             self.load_memory()
 
     def load_model(self):
+        print("Load model from : {}".format(os.path.join(self.root, "models", "models.pt")))
         assert os.path.isfile(os.path.join(self.root, "models", "models.pt"))
         self.model = self.buildModel()
         lmodel = torch.load(os.path.join(self.root, "models", "models.pt"))
@@ -58,9 +59,11 @@ class ReinforceAgent:
         self.target_model.load_state_dict(lmodel["model"])
 
     def load_memory(self):
+        
         assert os.path.isdir(os.path.join(self.root, "checkpoint"))
         list_of_files = glob.glob(os.path.join(self.root, "checkpoint", "*"))
         latest_file = max(list_of_files, key=os.path.getctime)
+        print("Load memory from : {}".format(latest_file))
         self.memory = torch.load(latest_file)
 
     def buildModel(self):

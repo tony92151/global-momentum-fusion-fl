@@ -1,8 +1,10 @@
 import argparse
 import copy
 import json
+from mimetypes import init
 import os
 import random
+import re
 import time
 from concurrent.futures import as_completed
 from bounded_pool_executor import BoundedThreadPoolExecutor as ThreadPoolExecutor
@@ -65,11 +67,11 @@ if __name__ == '__main__':
         print("Please set --config & --output.")
         exit(1)
 
-    dqn_round = 10
+    dqn_round = 50
 
     con_path = os.path.abspath(args.config)
     out_path = os.path.abspath(args.output)
-    os.makedirs(out_path, exist_ok=True)
+    # os.makedirs(out_path, exist_ok=True)
 
     gpus = [int(i) for i in args.gpu.split(",")]
     if len(gpus) > torch.cuda.device_count() or max(gpus) > torch.cuda.device_count():
@@ -103,7 +105,7 @@ if __name__ == '__main__':
     ########
     # DQN
     ########
-    agent = ReinforceAgent("./agent_cache", 2, 21)
+    agent = ReinforceAgent(args.tensorboard_path, 2, 21, load_memory=True, load_model=True)
 
     for di in range(dqn_round):
         print("=" * 10, " DQN round ({}/{}) : Regular training ".format(di, dqn_round), "=" * 10)
@@ -111,7 +113,7 @@ if __name__ == '__main__':
 
         # step1: init env
         logdir = os.path.join(args.tensorboard_path, "DQN_round_{}_of_{}_regular".format(di, dqn_round))
-        state = env.reset(writer=None, executor=executor, gpus=gpus)
+        state = env.reset(writer=init_writer(logdir), executor=executor, gpus=gpus)
 
         # torch.save(cache, os.path.join("./agent_cache",  "DQN_round_{}_of_{}_regular".format(di, dqn_round)))
         done = False
@@ -124,7 +126,7 @@ if __name__ == '__main__':
                                reward=reward,
                                next_state=next_state,
                                done=done)
-
+            state = next_state
             agent.trainModel()
 
         agent.updateTargetModel()
