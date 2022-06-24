@@ -99,7 +99,7 @@ def cifar_dataloaders(root="./data/cifar10", index_path="./cifar10/niid/index.js
             "test_s": None
             }
 
-def mnist_dataloaders(root="./data/mnist", index_path="./mnist/test0/index.json", batch_size=128, show=True):
+def fashionmnist_dataloaders(root="./data/mnist", index_path="./mnist/test0/index.json", batch_size=128, show=True):
     transform_test = transforms.Compose([
         transforms.ToTensor(),
         # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
@@ -111,9 +111,9 @@ def mnist_dataloaders(root="./data/mnist", index_path="./mnist/test0/index.json"
         # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
 
-    trainset = torchvision.datasets.MNIST(root=root, train=True, download=True, transform=transform_train)
+    trainset = torchvision.datasets.FashionMNIST(root=root, train=True, download=True, transform=transform_train)
 
-    testset = torchvision.datasets.MNIST(root=root, train=False, download=True, transform=transform_train)
+    testset = torchvision.datasets.FashionMNIST(root=root, train=False, download=True, transform=transform_train)
     ################################################################################################
     file_ = open(index_path, 'r')
     context = json.load(file_)
@@ -411,8 +411,8 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
         dataloaders = shakespeare_dataloaders(root=config.trainer.get_dataset_path(),
                                               batch_size=config.trainer.get_local_bs(),
                                               clients=config.general.get_nodes())
-    elif "mnist" in config.trainer.get_dataset_path():
-        dataloaders = mnist_dataloaders(root=config.trainer.get_dataset_path(),
+    elif "fashionmnist" in config.trainer.get_dataset_path():
+        dataloaders = fashionmnist_dataloaders(root=config.trainer.get_dataset_path(),
                                         index_path=os.getenv('index_path', config.trainer.get_dataset_path()),
                                         batch_size=config.trainer.get_local_bs())
 
@@ -420,7 +420,7 @@ def DATALOADER(config: Configer = None, emd_measurement=False):
         number_of_class = 0
         if "cifar10" in config.trainer.get_dataset_path():
             number_of_class = 10
-        elif "mnist" in config.trainer.get_dataset_path():
+        elif "fashionmnist" in config.trainer.get_dataset_path():
             number_of_class = 10
         elif "femnist" in config.trainer.get_dataset_path():
             number_of_class = 62

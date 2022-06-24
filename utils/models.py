@@ -116,6 +116,19 @@ class ResNet9_mnist(torchvision.models.resnet.ResNet):
                                             layers=[1, 1, 1, 1],
                                             num_classes=10)
         self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=1, padding=3, bias=False)
+
+class ResNet18_mnist(torchvision.models.resnet.ResNet):
+    def __init__(self):
+        super(ResNet18_mnist, self).__init__(block=torchvision.models.resnet.BasicBlock,
+                                            layers=[2, 2, 2, 2],
+                                            num_classes=10)
+        self.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=1, padding=3, bias=False)
+
+class ResNet20_mnist_gdc(CifarResNet):
+    def __init__(self):
+        super(ResNet20_mnist_gdc, self).__init__(params=[(16, 3, 1), (32, 3, 2), (64, 3, 2)], num_classes=10)
+
+        self.features[0] = nn.Conv2d(1, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
 ##########################################################################################
 
 class Net_femnist(nn.Module):
@@ -192,7 +205,12 @@ MODELS_TABLE = {
     # for shakespeare
     "lstm_shakespeare_1L": LSTM_shakespeare_1L,
     "lstm_shakespeare_2L": LSTM_shakespeare_2L,
-    "mnist": ResNet9_mnist,
+    # for fashionmnist
+    "resnet9_mnist": ResNet9_mnist,
+    "resnet18_mnist": ResNet18_mnist,
+    "resnet9_fashionmnist":ResNet9_mnist,
+    "resnet18_fashionmnist":ResNet18_mnist,
+    "resnet20_fashionmnist":ResNet20_mnist_gdc
 }
 
 

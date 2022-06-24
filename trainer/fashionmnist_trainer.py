@@ -9,9 +9,9 @@ from utils.opti import FEDOPTS, SERVEROPTS
 from sparse_compressor.record_SGD import RSGD
 
 
-class mnist_trainer(BASE_TRAINER):
+class fashionmnist_trainer(BASE_TRAINER):
     def __init__(self, config=None, cid=None, warmup_scheduler=None, device=torch.device("cpu")):
-        super(mnist_trainer, self).__init__(config=config, cid=cid, warmup_scheduler=warmup_scheduler, device=device)
+        super(fashionmnist_trainer, self).__init__(config=config, cid=cid, warmup_scheduler=warmup_scheduler, device=device)
         self.verbose = True
 
     def train_run(self, model=None, data=None, lr=None):

@@ -37,16 +37,48 @@ echo "seed : $seed"
 #for (( i = 6; i >= 0; i-- ))
 #do
 
-export i=0
-export index_path="./data/mnist/test$i/index.json"
+export i=1
+export index_path="./data/fashionmnist/test$i/index.json"
+
+# python3 train.py \
+# --config ./configs/mnist/$compress_method/config_1.ini \
+# --tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t0 \
+# --output ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t0 \
+# --gpu $gpu \
+# --pool 5 \
+# --seed $seed
+
+# python3 train.py \
+# --config ./configs/mnist/$compress_method/config_2.ini \
+# --tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t1 \
+# --output ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t1 \
+# --gpu $gpu \
+# --pool 5 \
+# --seed $seed
 
 python3 train.py \
---config ./configs/mnist/$compress_method/config_1.ini \
---tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.1 \
---output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.1 \
+--config ./configs/mnist/$compress_method/config_3.ini \
+--tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t2-0.8 \
+--output ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t2-0.8 \
 --gpu $gpu \
 --pool 5 \
 --seed $seed
+
+# python3 train.py \
+# --config ./configs/mnist/$compress_method/config_4.ini \
+# --tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t3 \
+# --output ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t3 \
+# --gpu $gpu \
+# --pool 5 \
+# --seed $seed
+
+# python3 train.py \
+# --config ./configs/mnist/$compress_method/config_5.ini \
+# --tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t4 \
+# --output ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t4 \
+# --gpu $gpu \
+# --pool 5 \
+# --seed $seed
 
 #python3 train.py \
 #--config ./configs/cifar10/$compress_method/config_2.ini \
