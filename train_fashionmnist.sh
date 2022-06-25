@@ -33,124 +33,51 @@ echo "tbpath : $tbpath"
 echo "seed : $seed"
 
 
-# for (( i = 0; i < 7; i++ ))
+for (( i = 0; i < 6; i++ ))
 #for (( i = 6; i >= 0; i-- ))
-#do
+do
 
-export i=1
+# export i=1
 export index_path="./data/fashionmnist/test$i/index.json"
 
-# python3 train.py \
-# --config ./configs/mnist/$compress_method/config_1.ini \
-# --tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t0 \
-# --output ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t0 \
-# --gpu $gpu \
-# --pool 5 \
-# --seed $seed
-
-# python3 train.py \
-# --config ./configs/mnist/$compress_method/config_2.ini \
-# --tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t1 \
-# --output ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t1 \
-# --gpu $gpu \
-# --pool 5 \
-# --seed $seed
-
 python3 train.py \
---config ./configs/mnist/$compress_method/config_3.ini \
---tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t2-0.8 \
---output ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t2-0.8 \
+--config ./configs/fashionmnist/$compress_method/config_1.ini \
+--tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r20_"$compress_method"_cr0.1 \
+--output ./"$tbpath"/test"$i"_fashionmnist_r20_"$compress_method"_cr0.1 \
 --gpu $gpu \
 --pool 5 \
 --seed $seed
 
 # python3 train.py \
-# --config ./configs/mnist/$compress_method/config_4.ini \
-# --tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t3 \
-# --output ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t3 \
+# --config ./configs/fashionmnist/$compress_method/config_3.ini \
+# --tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r20_"$compress_method"_cr0.3 \
+# --output ./"$tbpath"/test"$i"_fashionmnist_r20_"$compress_method"_cr0.3 \
 # --gpu $gpu \
 # --pool 5 \
 # --seed $seed
 
 # python3 train.py \
-# --config ./configs/mnist/$compress_method/config_5.ini \
-# --tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t4 \
-# --output ./"$tbpath"/test"$i"_fashionmnist_r9_"$compress_method"_base_s"$seed"_t4 \
+# --config ./configs/fashionmnist/$compress_method/config_5.ini \
+# --tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r20_"$compress_method"_cr0.5 \
+# --output ./"$tbpath"/test"$i"_fashionmnist_r20_"$compress_method"_cr0.5 \
 # --gpu $gpu \
 # --pool 5 \
 # --seed $seed
-
-#python3 train.py \
-#--config ./configs/cifar10/$compress_method/config_2.ini \
-#--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.2 \
-#--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.2 \
-#--gpu $gpu \
-# --pool 5 \
-# --seed $seed
-
-#python3 train.py \
-#--config ./configs/cifar10/$compress_method/config_3.ini \
-#--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.3 \
-#--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.3 \
-#--gpu $gpu \
-#--pool 5 \
-#--seed $seed
-
-#python3 train.py \
-#--config ./configs/cifar10/$compress_method/config_4.ini \
-#--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.4 \
-#--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.4 \
-#--gpu $gpu \
-# --pool 5 \
-# --seed $seed
-
-#python3 train.py \
-#--config ./configs/cifar10/$compress_method/config_5.ini \
-#--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.5 \
-#--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.5 \
-#--gpu $gpu \
-#--pool 5 \
-#--seed $seed
-
-#python3 train.py \
-#--config ./configs/cifar10/$compress_method/config_6.ini \
-#--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.6 \
-#--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.6 \
-#--gpu $gpu \
-# --pool 5 \
-# --seed $seed
-
-
-#python3 train.py \
-#--config ./configs/cifar10/$compress_method/config_7.ini \
-#--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.7 \
-#--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.7 \
-#--gpu $gpu \
-#--pool 5 \
-#--seed 123
-
-#python3 train.py \
-#--config ./configs/cifar10/$compress_method/config_8.ini \
-#--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.8 \
-#--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.8 \
-#--gpu $gpu \
-#--pool 5 \
-#--seed 123
-
-#python3 train.py \
-#--config ./configs/cifar10/$compress_method/config_9.ini \
-#--tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.9 \
-#--output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr0.9 \
-#--gpu $gpu \
-#--pool 5 \
-#--seed $seed
 
 # python3 train.py \
-# --config ./configs/cifar10/$compress_method/config_10.ini \
-# --tensorboard_path ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr1.0 \
-# --output ./"$tbpath"/test"$i"_cifar10_r56_"$compress_method"_cr1.0 \
+# --config ./configs/fashionmnist/$compress_method/config_7.ini \
+# --tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r20_"$compress_method"_cr0.7 \
+# --output ./"$tbpath"/test"$i"_fashionmnist_r20_"$compress_method"_cr0.7 \
 # --gpu $gpu \
 # --pool 5 \
 # --seed $seed
 
-#done
+# python3 train.py \
+# --config ./configs/fashionmnist/$compress_method/config_1.ini \
+# --tensorboard_path ./"$tbpath"/test"$i"_fashionmnist_r20_"$compress_method"_cr0.9 \
+# --output ./"$tbpath"/test"$i"_fashionmnist_r20_"$compress_method"_cr0.9 \
+# --gpu $gpu \
+# --pool 5 \
+# --seed $seed
+
+done
