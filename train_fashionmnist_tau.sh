@@ -40,7 +40,7 @@ do
 export index_path="./data/fashionmnist/test$i/index.json"
 
 
-for (( t = 1; t <= 10; i++ ))
+for (( t = 1; t <= 10; t++ ))
 do
 
 
