@@ -10,7 +10,7 @@ from utils.configer import Configer
 # from sparse_optimizer.dgcsgd.optimizer import DGCSGD
 # from sparse_optimizer.sgcsgd.optimizer import SGCSGD
 # from sparse_optimizer.gfgcsgd.optimizer import GFGCSGD
-from sparse_compressor.record_SGD import RSGD
+from sparse_optimizer.record_SGD import RSGD
 ############################################
 # from sparse_optimizer.sgcsgd.optimizer import 
 

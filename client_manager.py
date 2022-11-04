@@ -10,7 +10,7 @@ from utils.models import MODELS
 from client.clients import get_client
 from server.servers import get_server
 from trainer.trainers import get_trainer
-from sparse_compressor.topk_compressor import topkCompressor
+from sparse_optimizer.topk_compressor import topkCompressor
 
 
 class client_manager:
