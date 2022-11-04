@@ -2,13 +2,13 @@ from abc import ABC
 
 import torch
 
-from sparse_compressor.topk_compressor import topkCompressor
+from sparse_optimizer.topk_compressor import topkCompressor
 from client.base_client import BASE_CLIENT
 
 from copy import deepcopy as dcopy
 
 from utils.configer import Configer
-from sparse_compressor.scheduler import warmup_scheduler, compress_rate_scheduler, fusion_ratio_scheduler
+from sparse_optimizer.scheduler import warmup_scheduler, compress_rate_scheduler, fusion_ratio_scheduler
 
 from client.dgc_client import dgc_memory
 

@@ -1,8 +1,8 @@
 import torch
 import time
 import copy
-from sparse_compressor.gfcompressor import GFCCompressor
-from sparse_compressor.base_optimizer import BASE_SGD, Memory
+from sparse_optimizer.gfcompressor import GFCCompressor
+from sparse_optimizer.base_optimizer import BASE_SGD, Memory
 
 
 class GFGCSGD(BASE_SGD):

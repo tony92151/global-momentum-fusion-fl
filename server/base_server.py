@@ -2,7 +2,7 @@ import torch
 from typing import List
 from utils.configer import Configer
 from server.aggregater import weight_aggregater
-from sparse_compressor.topk_compressor import topkCompressor
+from sparse_optimizer.topk_compressor import topkCompressor
 
 
 class BASE_SERVER:

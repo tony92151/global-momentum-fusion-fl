@@ -1,9 +1,9 @@
 import torch
 import copy, os, time
-from sparse_compressor.topk_compressor import topkCompressor
+from sparse_optimizer.topk_compressor import topkCompressor
 from collections import defaultdict
 from torch.optim.lr_scheduler import StepLR
-from sparse_compressor.base_optimizer import BASE_SGD, Memory
+from sparse_optimizer.base_optimizer import BASE_SGD, Memory
 
 class SGCSGD(BASE_SGD):
     def __init__(self, params, cid=-1, lr=None, dgc_momentum=0.9, momentum=0, dampening=0,

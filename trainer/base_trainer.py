@@ -7,7 +7,7 @@ from utils.opti import SERVEROPTS, FEDOPTS
 from utils.aggregator import set_gradient
 from utils.weight_divergence.weight_divergence import weight_divergence_mod
 
-from sparse_compressor.record_SGD import RSGD
+from sparse_optimizer.record_SGD import RSGD
 
 
 class BASE_TRAINER:

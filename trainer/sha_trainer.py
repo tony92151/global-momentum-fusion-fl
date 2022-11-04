@@ -6,7 +6,7 @@ from trainer.base_trainer import BASE_TRAINER
 from copy import deepcopy as dcopy
 
 from utils.opti import FEDOPTS, SERVEROPTS
-from sparse_compressor.record_SGD import RSGD
+from sparse_optimizer.record_SGD import RSGD
 
 
 class sha_trainer(BASE_TRAINER):

@@ -3,7 +3,7 @@ import pickle
 import sys
 from copy import deepcopy as dcopy
 import torch
-from sparse_compressor.topk_compressor import topkCompressor
+from sparse_optimizer.topk_compressor import topkCompressor
 
 
 def add_mean_var(means=None, vrs=None, tracks=None):

@@ -10,7 +10,7 @@ from bounded_pool_executor import BoundedThreadPoolExecutor as ThreadPoolExecuto
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from sparse_compressor.warmup import warmup_scheduler
+from sparse_optimizer.warmup import warmup_scheduler
 from utils.configer import Configer
 from client_manager import client_manager
 
