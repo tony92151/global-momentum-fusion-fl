@@ -1,7 +1,7 @@
 import torch
 import copy, os, time
-from sparse_optimizer.topk_compressor import topkCompressor
-from sparse_optimizer.base_optimizer import BASE_SGD, Memory
+from sparse_compressor.topk_compressor import topkCompressor
+from sparse_compressor.base_optimizer import BASE_SGD, Memory
 
 class DGCSGD(BASE_SGD):
     def __init__(self, params, lr=None, dgc_momentum=0.9, momentum=0, dampening=0,

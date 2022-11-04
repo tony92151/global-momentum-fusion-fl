@@ -1,7 +1,7 @@
 import torch
 import time
-from sparse_optimizer.gfcompressor import GFCCompressor
-from sparse_optimizer.base_optimizer import BASE_SGD, Memory
+from sparse_compressor.gfcompressor import GFCCompressor
+from sparse_compressor.base_optimizer import BASE_SGD, Memory
 
 class GFDGCSGD(BASE_SGD):
     def __init__(self, params, lr=None, dgc_momentum=0.9, momentum=0, dampening=0,
