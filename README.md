@@ -26,8 +26,9 @@ seed=123 gpu=0 tbpath=./cifar10_repo_test compress_method="DGC" bash train_cifar
 seed=123 gpu=0 tbpath=./cifar10_repo_test compress_method="GFDGC" bash train_cifar10.sh
 seed=123 gpu=0 tbpath=./cifar10_repo_test compress_method="SGC" bash train_cifar10.sh
 seed=123 gpu=0 tbpath=./cifar10_repo_test compress_method="GFGC" bash train_cifar10.sh
-
+```
 ### Shakespeare dataset
+```shell=
 In our shakespeare experiment:
 seed=123 gpu=0 tbpath=./sha_repo_exp compress_method="DGC" bash train_sha.sh
 seed=123 gpu=0 tbpath=./sha_repo_exp compress_method="GFDGC" bash train_sha.sh
