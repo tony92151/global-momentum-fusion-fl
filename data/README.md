@@ -2,6 +2,21 @@
 
 ### cifar10
 
+In the mod-cifar10 dataset, we separate cifar10 into 20 parts.
+Each part represent a client.
+
+We follow the intrusion of FedAvg and measure these datasets by Earth Moving Distance provided by this approach.
+
+Dataset  |  Earth moving distance
+:--------------:|:-----:
+test0    |  0.00 (iid)
+test1    |  0.48
+test2    |  0.76
+test3    |  0.87
+test4    |  0.99
+test5    |  1.18
+test6    |  1.35
+
 ***
 usage: create_cifar10.py [-h] [--n N] [--data DATA] [--download DOWNLOAD] [--num_shards NUM_SHARDS] [--seed SEED]
                          [-f F]
@@ -26,12 +41,12 @@ optional arguments:
 ***
 
 This command will download cifar10 by pyrorch build-in function, and generate indexing json files for all clients.
-```python
+```shell
 python3 ./create_cifar10.py --n 20
 ```
 
 This command will download cifar10 by pyrorch build-in function, and download indexing json files of 20 clients in our experiment.
-```python
+```shell
 python3 ./create_cifar10.py --download True
 ```
 
@@ -46,12 +61,12 @@ fellow this [repo](https://github.com/TalwalkarLab/leaf/tree/master/data/femnist
 ```
 this might take 1.5 hours
 
-```python
+```shell
 python3 ./create_femnist.py --data {path to}/leaf/data/femnist/data
 ```
 
 Or just download it by
-```python
+```shell
 python3 ./create_femnist.py --data download
 ```
 this has 3560 clients and at least 100 images each client.
@@ -65,11 +80,11 @@ fellow this [repo](https://github.com/TalwalkarLab/leaf/tree/master/data/shakesp
 ```
 this might take 1 minute
 
-```python
+```shell
 python3 ./create_shakespeare.py --data {path to}/leaf/data/shakespeare/data
 ```
 Or just download it by
-```python
+```shell
 python3 ./create_shakespeare.py --data download
 ```
 
