@@ -20,8 +20,10 @@ The following figure demonstrate how global-momentum-fusion work with DGC in fed
 ## Dataset prepare
 
 ```bash
-
+cd data
+python3 ./create_cifar10.py --download
 python3 ./create_shakespeare.py --download
+cd ..
 ```
 
 [Detail](data/README.md)
