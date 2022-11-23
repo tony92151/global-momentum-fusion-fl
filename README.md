@@ -2,9 +2,14 @@
 
 ## Introduction
 
-This repository is an official implementation of this paper. arXiv (wait for confirm) 
+This repository is an official implementation of this paper. [arXiv](https://arxiv.org/abs/2211.09320)
 ```
-Improving Federated Learning Communication Efficiency with Global Momentum Fusion for Gradient Compression Schemes
+@article{kuo2022improving,
+  title={Improving Federated Learning Communication Efficiency with Global Momentum Fusion for Gradient Compression Schemes},
+  author={Kuo, Chun-Chih and Kuo, Ted Tsei and Lin, Chia-Yu},
+  journal={arXiv preprint arXiv:2211.09320},
+  year={2022}
+}
 ```
 
 As description in the paper, we propose global-momentum-fusion method to reduce communication overheads. 
@@ -13,6 +18,11 @@ The following figure demonstrate how global-momentum-fusion work with DGC in fed
 
 
 ## Dataset prepare
+
+```bash
+
+python3 ./create_shakespeare.py --download
+```
 
 [Detail](data/README.md)
 

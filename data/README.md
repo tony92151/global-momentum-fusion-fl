@@ -18,7 +18,7 @@ test5    |  1.18
 test6    |  1.35
 
 ***
-usage: create_cifar10.py [-h] [--n N] [--data DATA] [--download DOWNLOAD] [--num_shards NUM_SHARDS] [--seed SEED]
+usage: create_cifar10.py [-h] [--n N] [--data DATA] [--download] [--num_shards NUM_SHARDS] [--seed SEED]
                          [-f F]
 
 optional arguments:
@@ -29,7 +29,7 @@ optional arguments:
 
   --data DATA           Path to dataset
 
-  --download DOWNLOAD
+  --download
 
   --num_shards NUM_SHARDS
                         Default num_shards=100. Smaller num_shards will make the dataset more non-
@@ -47,7 +47,7 @@ python3 ./create_cifar10.py --n 20
 
 This command will download cifar10 by pyrorch build-in function, and download indexing json files of 20 clients in our experiment.
 ```shell
-python3 ./create_cifar10.py --download True
+python3 ./create_cifar10.py --download
 ```
 
 
@@ -85,7 +85,7 @@ python3 ./create_shakespeare.py --data {path to}/leaf/data/shakespeare/data
 ```
 Or just download it by
 ```shell
-python3 ./create_shakespeare.py --data download
+python3 ./create_shakespeare.py --download
 ```
 
 ### Sentiment140
