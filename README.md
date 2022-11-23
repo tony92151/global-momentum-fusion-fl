@@ -3,6 +3,8 @@
 ## Introduction
 
 This repository is an official implementation of this paper. [arXiv](https://arxiv.org/abs/2211.09320)
+
+`The code is still under refactoring`
 ```
 @article{kuo2022improving,
   title={Improving Federated Learning Communication Efficiency with Global Momentum Fusion for Gradient Compression Schemes},
