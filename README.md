@@ -1,5 +1,7 @@
 # global-momentum-fusion-fl
 
+‼️V2 is in progress‼️
+
 ## Introduction
 
 This repository is an official implementation of this paper. [arXiv](https://arxiv.org/abs/2211.09320)
